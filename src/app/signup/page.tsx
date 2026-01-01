@@ -1,10 +1,19 @@
+"use client"
 import Link from "next/link"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
+import { useRouter } from "next/navigation"
 
 export default function SignUpPage() {
+  const router = useRouter()
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    // Later you can add validation / API call here
+    router.push("/Dashboard")
+  }
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       {/* Back to Home */}
@@ -24,7 +33,7 @@ export default function SignUpPage() {
         </div>
 
         {/* Form */}
-        <form className="flex flex-col gap-6" action="#">
+        <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-4">
             <Field>
               <FieldLabel htmlFor="name">Full Name</FieldLabel>

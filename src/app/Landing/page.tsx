@@ -25,7 +25,7 @@ export default function LandingPage() {
         </div>
         {/* Navigation Links */}
         <nav className="flex-1 flex justify-end items-center gap-4 text-muted-foreground font-medium pt-2">
-          <Link href="/" className="italic transition-colors">
+          <Link href="/Landing" className="italic transition-colors">
             Home
           </Link>
           <span className="text-border">|</span>

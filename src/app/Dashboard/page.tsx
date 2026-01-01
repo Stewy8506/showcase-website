@@ -1,3 +1,5 @@
+"use client"
+import { useState } from "react"
 import {
   Search,
   Bell,
@@ -10,12 +12,28 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react"
-import { Sidebar } from "@/components/sidebar"
-import { Calendar } from "@/components/calendar"
-import { MedicationCard } from "@/components/medication-card"
-import { HealthChart } from "@/components/health-chart"
+import { Sidebar } from "@/components/ui/sidebar"
+import { Calendar } from "@/components/ui/calendar"
+import { MedicationCard } from "@/components/ui/medication-card"
+import { HealthChart } from "@/components/ui/health-chart"
 
 export default function Dashboard() {
+  const [medications, setMedications] = useState([
+    { id: 4, name: "Soframycin", dosage: "", time: "11:00 AM", checked: true },
+    { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: true },
+    { id: 2, name: "Loratadine", dosage: "10mg", time: "06:30 PM", checked: true },
+    { id: 3, name: "Creatine", dosage: "5mg", time: "09:00 PM", checked: true },
+
+  ])
+  const toggleMedication = (id: number) => {
+    setMedications((items) =>
+      items.map((m) =>
+        m.id === id ? { ...m, checked: !m.checked } : m
+      )
+    )
+  }
+  const checkedCount = medications.filter((m) => m.checked).length
+
   return (
     <div className="dashboard-theme flex h-screen bg-background overflow-hidden font-sans">
       {/* Sidebar */}
@@ -68,25 +86,21 @@ export default function Dashboard() {
             <div className="flex flex-col gap-6">
               <div className="flex justify-between items-end px-2">
                 <h3 className="font-bold text-[15px] text-primary">Today's Medications:</h3>
-                <span className="font-black text-2xl italic text-primary">1/4</span>
+                <span className="font-black text-2xl italic text-primary">{checkedCount}/{medications.length}</span>
               </div>
 
               <div className="flex flex-col gap-3">
-                <MedicationCard name="Probiotic" dosage="250mg" time="04:00 PM" checked />
-                <MedicationCard name="Loratadine" dosage="10mg" time="06:30 PM" checked />
-                <MedicationCard name="Creatine" dosage="5mg" time="09:00 PM" checked />
-                <div className="flex items-center gap-4 px-6 py-4 rounded-full bg-[#EDF1F5] opacity-50">
-                  <div className="flex items-center gap-2 text-[9px] font-bold text-primary/60 uppercase italic">
-                    <Clock className="w-2.5 h-2.5" />
-                    11:00 AM
-                  </div>
-                  <span className="font-bold text-xs text-primary">Soframycin</span>
-                </div>
+                {medications.map((m) => (
+                  <MedicationCard
+                    key={m.id}
+                    name={m.name}
+                    dosage={m.dosage}
+                    time={m.time}
+                    checked={m.checked}
+                    onToggle={() => toggleMedication(m.id)}
+                  />
+                ))}
               </div>
-
-              <button className="mx-auto mt-1">
-                <ChevronDown className="w-5 h-5 text-primary" />
-              </button>
             </div>
           </section>
 
@@ -104,15 +118,12 @@ export default function Dashboard() {
                 ].map((action, i) => (
                   <button
                     key={i}
-                    className="flex-1 aspect-square max-w-[300px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
+                    className="flex-1 aspect-square max-w-[245px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
                   >
                     <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
                     <span className="font-bold text-[14px] text-primary whitespace-nowrap">{action.label}</span>
                   </button>
                 ))}
-                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-lg cursor-pointer border border-primary/5 z-10">
-                  <ChevronRight className="w-5 h-5 text-primary" />
-                </div>
               </div>
             </div>
 
