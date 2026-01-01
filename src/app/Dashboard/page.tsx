@@ -25,7 +25,7 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col p-6 pl-0 gap-6 overflow-hidden">
         {/* Header */}
         <header className="flex items-center gap-12">
-          <div className="flex items-center gap-4 min-w-fit">
+          <div className="flex items-left gap-4 min-w-fit">
             <span className="font-black italic text-2xl tracking-tighter">
               Health<span className="text-secondary">Care+</span>
             </span>
@@ -104,7 +104,7 @@ export default function Dashboard() {
                 ].map((action, i) => (
                   <button
                     key={i}
-                    className="flex-1 aspect-square max-w-[180px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
+                    className="flex-1 aspect-square max-w-[300px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
                   >
                     <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
                     <span className="font-bold text-[14px] text-primary whitespace-nowrap">{action.label}</span>
