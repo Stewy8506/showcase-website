@@ -16,13 +16,14 @@ import { Sidebar } from "@/components/ui/sidebar"
 import { Calendar } from "@/components/ui/calendar"
 import { MedicationCard } from "@/components/ui/medication-card"
 import { HealthChart } from "@/components/ui/health-chart"
+import Link from "next/link"
 
 export default function Dashboard() {
   const [medications, setMedications] = useState([
-    { id: 4, name: "Soframycin", dosage: "", time: "11:00 AM", checked: true },
-    { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: true },
-    { id: 2, name: "Loratadine", dosage: "10mg", time: "06:30 PM", checked: true },
-    { id: 3, name: "Creatine", dosage: "5mg", time: "09:00 PM", checked: true },
+    { id: 4, name: "Soframycin", dosage: "Lotion", time: "11:00 AM", checked: false },
+    { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: false },
+    { id: 2, name: "Loratadine", dosage: "10mg", time: "06:30 PM", checked: false },
+    { id: 3, name: "Creatine", dosage: "5mg", time: "09:00 PM", checked: false },
 
   ])
   const toggleMedication = (id: number) => {
@@ -35,12 +36,12 @@ export default function Dashboard() {
   const checkedCount = medications.filter((m) => m.checked).length
 
   return (
-    <div className="dashboard-theme flex h-screen bg-background overflow-hidden font-sans">
+    <div className="dashboard-theme flex h-screen bg-background overflow-x-auto overflow-y-auto font-sans">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col p-6 pl-0 gap-6 overflow-hidden">
+      <div className="flex-1 flex flex-col p-6 pl-0 gap-6 min-w-[1280px] overflow-y-auto">
         {/* Header */}
         <header className="flex items-center gap-12">
           <div className="flex items-left gap-4 min-w-fit">
@@ -80,7 +81,7 @@ export default function Dashboard() {
         {/* Dashboard Content */}
         <main className="flex-1 flex gap-8 overflow-hidden">
           {/* Left Column - Card */}
-          <section className="w-[420px] bg-white rounded-[3.5rem] p-10 flex flex-col gap-10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] overflow-y-auto no-scrollbar">
+          <section className="-ml-6 w-[420px] bg-white rounded-[3.5rem] p-10 flex flex-col gap-10 shadow-[0_20px_50px_rgba(0,0,0,0.03)] overflow-y-auto no-scrollbar">
             <Calendar />
 
             <div className="flex flex-col gap-6">
@@ -115,15 +116,62 @@ export default function Dashboard() {
                   { icon: MessageSquare, label: "Symptoms Ai" },
                   { icon: Link2, label: "Medicine Centre" },
                   { icon: AlertCircle, label: "Reminders" },
-                ].map((action, i) => (
-                  <button
-                    key={i}
-                    className="flex-1 aspect-square max-w-[245px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
-                  >
-                    <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
-                    <span className="font-bold text-[14px] text-primary whitespace-nowrap">{action.label}</span>
-                  </button>
-                ))}
+                ].map((action, i) =>
+                  action.label === "Symptoms Ai" ? (
+                    <Link
+                      key={i}
+                      href="/chat"
+                      className="flex-1 aspect-square max-w-[245px]"
+                    >
+                      <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
+                        <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
+                        <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
+                        <span className="font-bold text-[14px] text-primary whitespace-nowrap">
+                          {action.label}
+                        </span>
+                      </div>
+                    </Link>
+                  ) : action.label === "Medicine Centre" ? (
+                    <Link
+                      key={i}
+                      href="/medicines"
+                      className="flex-1 aspect-square max-w-[245px]"
+                    >
+                      <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
+                        <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
+                        <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
+                        <span className="font-bold text-[14px] text-primary whitespace-nowrap">
+                          {action.label}
+                        </span>
+                      </div>
+                    </Link>
+                  ) : action.label === "Reminders" ? (
+                    <Link
+                      key={i}
+                      href="/reminders"
+                      className="flex-1 aspect-square max-w-[245px]"
+                    >
+                      <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
+                        <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
+                        <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
+                        <span className="font-bold text-[14px] text-primary whitespace-nowrap">
+                          {action.label}
+                        </span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <button
+                      key={i}
+                      className="relative overflow-hidden cursor-pointer group flex-1 aspect-square max-w-[245px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
+                    >
+                      <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
+                      <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
+                      <span className="font-bold text-[14px] text-primary whitespace-nowrap">
+                        {action.label}
+                      </span>
+                    </button>
+                  )
+                )}
               </div>
             </div>
 

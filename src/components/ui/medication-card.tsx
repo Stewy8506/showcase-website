@@ -39,10 +39,10 @@ export function MedicationCard({ name, dosage, time, checked = false, onToggle }
             onClick={() => onToggle?.()}
             className={cn(
               "w-16 flex items-center justify-center transition-colors cursor-pointer",
-              checked ? "bg-secondary" : "bg-transparent border-l border-white/20",
+              checked ? "bg-transparent border-l border-white/20" : "bg-[#F0BF70]",
             )}
           >
-            {checked && <Check className="w-5 h-5 text-primary" strokeWidth={3} />}
+            {!checked && <Check className="w-5 h-5 text-black" strokeWidth={3} />}
           </div>
         </div>
       )}

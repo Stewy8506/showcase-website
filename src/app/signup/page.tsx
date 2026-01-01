@@ -18,7 +18,7 @@ export default function SignUpPage() {
     <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-background">
       {/* Back to Home */}
       <Link
-        href="/"
+        href="/Landing"
         className="absolute top-8 left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
