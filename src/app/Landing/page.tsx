@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
+import { GoogleAuthProvider, signInWithPopup, getAdditionalUserInfo } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 
@@ -13,9 +13,18 @@ export default function LandingPage() {
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
 
-      // back‑fill / ensure Firestore user profile
-      await migrateAuthUserToProfile(result.user)
+      const info = getAdditionalUserInfo(result)
 
+      if (info?.isNewUser) {
+        // first‑time Google sign‑in → create profile
+        await migrateAuthUserToProfile(result.user)
+
+        // send new users to Profile completion
+        window.location.href = "/Profile"
+        return
+      }
+
+      // existing users → go to Dashboard
       window.location.href = "/Dashboard"
     } catch (err) {
       console.error("Google login failed", err)

@@ -10,7 +10,8 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  getAdditionalUserInfo
 } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { migrateAuthUserToProfile } from "@/lib/firestore/users"
@@ -39,7 +40,8 @@ export default function SignUpPage() {
       // back‑fill / ensure Firestore profile
       await migrateAuthUserToProfile(cred.user)
 
-      router.push("/Dashboard")
+      // new email/password accounts → go to Profile completion
+      router.push("/Profile")
     } catch (err: any) {
       console.error("Firebase signup error:", err)
       alert(err?.message ?? "Failed to create account")
@@ -56,9 +58,19 @@ export default function SignUpPage() {
       const provider = new GoogleAuthProvider()
       const result = await signInWithPopup(auth, provider)
 
-      // back‑fill / ensure Firestore profile
-      await migrateAuthUserToProfile(result.user)
+      // detect first‑time Google sign‑in
+      const info = getAdditionalUserInfo(result)
 
+      if (info?.isNewUser) {
+        // first‑time Google sign‑in → create profile
+        await migrateAuthUserToProfile(result.user)
+
+        // send new users to Profile completion
+        router.push("/Profile")
+        return
+      }
+
+      // existing Google users → just sign in
       router.push("/Dashboard")
     } catch (err: any) {
       console.error("Firebase Google sign-in error:", err)

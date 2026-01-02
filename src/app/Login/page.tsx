@@ -12,8 +12,6 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  deleteUser,
-  signOut,
   getAdditionalUserInfo
 } from "firebase/auth"
 
@@ -63,23 +61,14 @@ export default function LoginPage() {
 
       const info = getAdditionalUserInfo(result)
 
-      // Prevent new Google accounts from logging in here
+      // First‑time Google users → create Firestore profile + go to Profile completion
       if (info?.isNewUser) {
-        try {
-          // delete the newly created auth user so it is not auto‑registered
-          await deleteUser(result.user)
-        } catch {
-          // fallback sign‑out if delete fails
-          await signOut(auth)
-        }
-
-        setError("This Google account is not registered. Please sign up first.")
+        await migrateAuthUserToProfile(result.user)
+        router.push("/Profile")
         return
       }
 
-      // Existing account → back‑fill / ensure profile then allow login
-      await migrateAuthUserToProfile(result.user)
-
+      // Existing Google users → go straight to Dashboard
       router.push("/Dashboard")
     } catch (err: any) {
       console.error("Firebase Google sign‑in error:", err)

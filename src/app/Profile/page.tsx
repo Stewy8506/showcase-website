@@ -4,7 +4,8 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, signOut, type User } from "firebase/auth"
-import { doc, onSnapshot, updateDoc } from "firebase/firestore"
+import { doc, onSnapshot, updateDoc, getDoc, setDoc } from "firebase/firestore"
+import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 import { db } from "@/lib/firebase"
 import Link from "next/link"
 import { ArrowLeft, LogOut, PenLine } from "lucide-react"
@@ -16,7 +17,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editFirstName, setEditFirstName] = useState("")
+  const [hasAutoOpenedEdit, setHasAutoOpenedEdit] = useState(false)
+  const [editFullName, setEditFullName] = useState("")
   const [editDob, setEditDob] = useState("")
   const [editGender, setEditGender] = useState("")
   const [editPhone, setEditPhone] = useState("")
@@ -35,42 +37,72 @@ export default function ProfilePage() {
       }
       setUser(u)
 
-      // Realtime Firestore profile listener
+      // Ensure profile exists before listening (prevents permission-denied)
       try {
         const ref = doc(db, "users", u.uid)
 
-        profileUnsub = onSnapshot(
-          ref,
-          (snap) => {
-            if (snap.exists()) {
-              const data = snap.data()
-              setProfile(data)
-
-              // populate form fields for editing
-              setEditFirstName(data.firstName ?? "")
-              setEditDob(data.dob ?? "")
-              setEditGender(data.gender ?? "")
-              setEditPhone(data.phoneNumber ?? "")
-              setEditPhotoURL(data.photoURL ?? "")
-              setEditPhotoThumbURL(data.photoThumbURL ?? "")
-            } else {
-              setProfile(null)
-
-              // ensure inputs remain controlled
-              setEditFirstName("")
-              setEditDob("")
-              setEditGender("")
-              setEditPhone("")
-              setEditPhotoURL("")
-              setEditPhotoThumbURL("")
+        getDoc(ref)
+          .then(async (snap) => {
+            if (!snap.exists()) {
+              try {
+                // create profile for first-time / legacy users
+                await migrateAuthUserToProfile(u)
+              } catch (err) {
+                console.error("Failed to create Firestore profile:", err)
+              }
             }
+
+            // Realtime listener AFTER profile is guaranteed to exist
+            profileUnsub = onSnapshot(
+              ref,
+              (snap) => {
+                if (snap.exists()) {
+                  const data = snap.data()
+                  setProfile(data)
+
+                  // populate form fields for editing
+                  setEditFullName(data.fullName ?? data.firstName ?? "")
+                  setEditDob(data.dob ?? "")
+                  setEditGender(data.gender ?? "")
+                  setEditPhone(data.phoneNumber ?? "")
+                  setEditPhotoURL(data.photoURL ?? "")
+                  setEditPhotoThumbURL(data.photoThumbURL ?? "")
+
+                  // Auto‑open edit modal on first visit if profile is incomplete
+                  const isIncomplete =
+                    !data.fullName ||
+                    !data.dob ||
+                    !data.gender ||
+                    !data.phoneNumber
+
+                  if (isIncomplete && !hasAutoOpenedEdit) {
+                    setShowEditModal(true)
+                    setHasAutoOpenedEdit(true)
+                  }
+                } else {
+                  setProfile(null)
+
+                  // ensure inputs remain controlled
+                  setEditFullName("")
+                  setEditDob("")
+                  setEditGender("")
+                  setEditPhone("")
+                  setEditPhotoURL("")
+                  setEditPhotoThumbURL("")
+                }
+
+                setLoading(false)
+              },
+              (err) => {
+                console.error("Realtime profile listener failed:", err)
+                setLoading(false)
+              }
+            )
+          })
+          .catch((err) => {
+            console.error("Error checking user profile:", err)
             setLoading(false)
-          },
-          (err) => {
-            console.error("Realtime profile listener failed:", err)
-            setLoading(false)
-          }
-        )
+          })
       } catch (err) {
         console.error("Failed to start profile listener:", err)
         setLoading(false)
@@ -142,25 +174,45 @@ export default function ProfilePage() {
   }
 
   const handleSaveProfile = async () => {
-  if (!user || uploadingPhoto) return
+    if (!user || uploadingPhoto) return
 
     const ref = doc(db, "users", user.uid)
 
-    await updateDoc(ref, {
-      firstName: editFirstName || null,
-      dob: editDob || null,
-      gender: editGender || null,
-      phoneNumber: editPhone || null,
-      photoURL: editPhotoURL || null,
-      photoThumbURL: editPhotoThumbURL || null,
-      updatedAt: new Date()
-    })
+    // Auto‑copy Google photo into Firestore on first save (if no uploaded photo yet)
+    const googlePhoto = user.photoURL || null
+
+    const finalPhotoURL =
+      editPhotoURL ||
+      profile?.photoURL ||
+      googlePhoto ||
+      null
+
+    const finalThumbURL =
+      editPhotoThumbURL ||
+      profile?.photoThumbURL ||
+      googlePhoto ||
+      null
+
+    await setDoc(
+      ref,
+      {
+        fullName: editFullName || null,
+        dob: editDob || null,
+        gender: editGender || null,
+        phoneNumber: editPhone || null,
+        photoURL: finalPhotoURL,
+        photoThumbURL: finalThumbURL,
+        updatedAt: new Date()
+      },
+      { merge: true }
+    )
 
     setShowEditModal(false)
   }
 
   // Derive first name + age (if provided elsewhere in user data)
   const firstName =
+    profile?.fullName?.split(" ")[0] ??
     profile?.firstName ??
     user?.displayName?.split(" ")[0] ??
     "Unnamed User"
@@ -192,6 +244,12 @@ export default function ProfilePage() {
       }
     }
   }
+
+  // Require profile completion for first‑time / incomplete profiles
+  const requireCompletion =
+    !profile?.dob ||
+    !profile?.gender ||
+    !profile?.phoneNumber
 
   return (
     <main className="dashboard-theme min-h-screen w-full flex justify-center px-4 py-8 bg-background/90">
@@ -232,7 +290,7 @@ export default function ProfilePage() {
             {/* User Card */}
             <div className="rounded-[2rem] border border-white bg-white p-6 flex flex-col md:flex-row gap-6 md:items-center">
               <div className="w-40 h-40 rounded-full bg-white border border-primary/20 shadow-sm overflow-hidden flex items-center justify-center text-primary font-bold text-2xl">
-                {profile?.photoURL || editPhotoURL ? (
+                {profile?.photoURL || editPhotoURL || user?.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={
@@ -240,7 +298,8 @@ export default function ProfilePage() {
                       profile?.photoThumbURL ||
                       editPhotoThumbURL ||
                       profile?.photoURL ||
-                      editPhotoURL
+                      editPhotoURL ||
+                      user?.photoURL
                     }
                     alt="Profile"
                     className="w-full h-full object-cover"
@@ -288,7 +347,7 @@ export default function ProfilePage() {
                 <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
                   <p className="text-xs text-primary/60 mb-1">Name</p>
                   <p className="text-sm font-semibold text-primary">
-                    {profile?.firstName ?? user?.displayName ?? "Not set"}
+                    {profile?.fullName ?? profile?.firstName ?? user?.displayName ?? "Not set"}
                   </p>
                 </div>
 
@@ -307,7 +366,11 @@ export default function ProfilePage() {
         {showEditModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center px-4"
-            onClick={() => setShowEditModal(false)}
+            onClick={() => {
+              if (!requireCompletion && !uploadingPhoto) {
+                setShowEditModal(false)
+              }
+            }}
           >
             <div
               className="bg-white rounded-[2rem] shadow-xl border border-primary/10 w-full max-w-2xl p-8 flex flex-col gap-6"
@@ -322,38 +385,71 @@ export default function ProfilePage() {
                 <div className="flex flex-col gap-1">
                   <label className="text-sm text-primary/70">Profile Picture</label>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) handlePhotoUpload(file)
-                    }}
-                    className="w-full rounded-xl border border-primary/20 px-3 py-2 bg-white cursor-pointer text-primary placeholder:text-primary/70"
-                  />
+                  <div className="flex items-center gap-6 mt-2">
 
-                  {(localPhotoPreview || profile?.photoURL || editPhotoURL) && (
-                    <div className="mt-2 w-24 h-24 rounded-full border border-primary/20 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={
-                          localPhotoPreview ||
-                          profile?.photoThumbURL ||
-                          editPhotoThumbURL ||
-                          profile?.photoURL ||
-                          editPhotoURL
-                        }
-                        alt="Preview"
-                        className="w-full h-full object-cover"
+                    {/* Profile Thumbnail */}
+                    {(localPhotoPreview || profile?.photoURL || editPhotoURL || user?.photoURL) && (
+                      <div className="w-40 h-40 rounded-full border border-primary/20 overflow-hidden relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={
+                            localPhotoPreview ||
+                            profile?.photoThumbURL ||
+                            editPhotoThumbURL ||
+                            profile?.photoURL ||
+                            editPhotoURL ||
+                            user?.photoURL
+                          }
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        {uploadingPhoto && (
+                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                            <div className="w-12 h-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Drop‑zone Upload Button */}
+                    <label className="flex flex-col items-center justify-center border-2 border-dashed border-primary/30 rounded-2xl px-6 py-6 cursor-pointer hover:border-primary/60 transition">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) handlePhotoUpload(file)
+                        }}
                       />
-                    </div>
-                  )}
 
-                  {uploadingPhoto && (
-                    <p className="text-xs text-primary/60 mt-1">
-                      Uploading photo…
-                    </p>
-                  )}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-8 h-8 text-primary mb-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 4v16m8-8H4"
+                        />
+                      </svg>
+
+                      <p className="text-sm text-primary font-medium">
+                        Drop your documents here
+                      </p>d
+
+                      <p className="text-xs text-primary/60 mt-1">or</p>
+
+                      <div className="mt-2 px-4 py-2 rounded-full bg-[#F0BF70] text-black font-semibold">
+                        Browse files
+                      </div>
+                    </label>
+
+                  </div>
 
                   {(profile?.photoURL || editPhotoURL || localPhotoPreview) && (
                     <button
@@ -371,11 +467,12 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm text-primary/70">First Name</label>
+                  <label className="text-sm text-primary/70">Full Name</label>
                   <input
-                    value={editFirstName}
-                    onChange={(e) => setEditFirstName(e.target.value)}
+                    value={editFullName}
+                    onChange={(e) => setEditFullName(e.target.value)}
                     className="w-full rounded-xl border border-primary/20 px-3 py-2 outline-none text-primary placeholder:text-primary/70"
+                    placeholder="Enter your full name"
                   />
                 </div>
 
@@ -419,24 +516,33 @@ export default function ProfilePage() {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
-  onClick={() => {
-    if (!uploadingPhoto) setShowEditModal(false)
-  }}
-  disabled={uploadingPhoto}
-  className="text-primary px-4 py-2 rounded-xl border border-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
->
-  Cancel
-</button>
-
+                  onClick={() => {
+                    if (!requireCompletion && !uploadingPhoto) {
+                      setShowEditModal(false)
+                    }
+                  }}
+                  disabled={uploadingPhoto || requireCompletion}
+                  className="text-primary px-4 py-2 rounded-xl border border-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                
                 <button
-  onClick={() => {
-    if (!uploadingPhoto) handleSaveProfile()
-  }}
-  disabled={uploadingPhoto}
-  className="px-5 py-2.5 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
->
-  Save Changes
-</button>
+                  onClick={() => {
+                    if (!uploadingPhoto && editDob && editGender && editPhone) {
+                      handleSaveProfile()
+                    }
+                  }}
+                  disabled={
+                    uploadingPhoto ||
+                    !editDob ||
+                    !editGender ||
+                    !editPhone
+                  }
+                  className="px-5 py-2.5 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Save Changes
+                </button>
               </div>
             </div>
           </div>

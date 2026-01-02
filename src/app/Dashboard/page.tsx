@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, signOut } from "firebase/auth"
 import { AnimatePresence, motion } from "framer-motion"
-import { doc, onSnapshot } from "firebase/firestore"
+import { doc, onSnapshot, getDoc } from "firebase/firestore"
+import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 import { db } from "@/lib/firebase"
 
 export default function Dashboard() {
@@ -55,30 +56,47 @@ export default function Dashboard() {
 }, [showProfileMenu])
 
   useEffect(() => {
-  let profileUnsub: (() => void) | null = null
+    let profileUnsub: (() => void) | null = null
 
-  const unsub = onAuthStateChanged(auth, (u) => {
-    if (!u) {
-      setUser(null)
-      setProfile(null)
-      router.push("/Landing")
-      return
-    }
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (!u) {
+        setUser(null)
+        setProfile(null)
+        router.push("/Landing")
+        return
+      }
 
-    setUser(u)
+      setUser(u)
 
-    // Realtime Firestore profile listener
-    const ref = doc(db, "users", u.uid)
-    profileUnsub = onSnapshot(ref, (snap) => {
-      setProfile(snap.exists() ? snap.data() : null)
+      // Ensure profile exists before listening (prevents permission-denied)
+      const ref = doc(db, "users", u.uid)
+
+      getDoc(ref)
+        .then(async (snap) => {
+          if (!snap.exists()) {
+            try {
+              // create profile for legacy / first-time users
+              await migrateAuthUserToProfile(u)
+            } catch (err) {
+              console.error("Failed to create Firestore profile:", err)
+            }
+          }
+
+          // Realtime listener (safe after profile exists)
+          profileUnsub = onSnapshot(ref, (s) => {
+            setProfile(s.exists() ? s.data() : null)
+          })
+        })
+        .catch((err) => {
+          console.error("Error checking user profile:", err)
+        })
     })
-  })
 
-  return () => {
-    if (profileUnsub) profileUnsub()
-    unsub()
-  }
-}, [router])
+    return () => {
+      if (profileUnsub) profileUnsub()
+      unsub()
+    }
+  }, [router])
   const [medications, setMedications] = useState([
     { id: 4, name: "Soframycin", dosage: "Lotion", time: "11:00 AM", checked: false },
     { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: false },
@@ -364,10 +382,9 @@ export default function Dashboard() {
               >
               <img
                 src={
-                  profile?.photoURL ||      // Firestore profile photo (preferred)
-                  user?.photoURL ||         // Fallback: Auth photo
-                  user?.providerData?.[0]?.photoURL ||
-                  "/images/home-20page.png" // Final fallback
+                  profile?.photoThumbURL ||
+                  profile?.photoURL ||
+                  "/images/home-20page.png"
                 }
                 alt="Profile"
                 className="w-full h-full object-cover"
@@ -482,7 +499,7 @@ export default function Dashboard() {
                     <Link
                       key={i}
                       href="/chat"
-                      className="flex-1 aspect-square max-w-[245px]"
+                      className="flex-1 aspect-square max-w-[255px]"
                     >
                       <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
                         <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
@@ -496,7 +513,7 @@ export default function Dashboard() {
                     <Link
                       key={i}
                       href="/medicines"
-                      className="flex-1 aspect-square max-w-[245px]"
+                      className="flex-1 aspect-square max-w-[255px]"
                     >
                       <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
                         <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
@@ -510,7 +527,7 @@ export default function Dashboard() {
                     <Link
                       key={i}
                       href="/reminders"
-                      className="flex-1 aspect-square max-w-[245px]"
+                      className="flex-1 aspect-square max-w-[255px]"
                     >
                       <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
                         <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
@@ -524,7 +541,7 @@ export default function Dashboard() {
                     <button
                       key={i}
                       onClick={() => setShowUploadModal(true)}
-                      className="relative overflow-hidden cursor-pointer group flex-1 aspect-square max-w-[245px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
+                      className="relative overflow-hidden cursor-pointer group flex-1 aspect-square max-w-[255px] bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5"
                     >
                       <span className="pointer-events-none absolute inset-0 rounded-[2.5rem] bg-primary/10 opacity-0 group-active:opacity-100 transition-opacity" />
                       <action.icon className="w-10 h-10 text-primary" strokeWidth={1.2} />
