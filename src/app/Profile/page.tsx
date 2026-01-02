@@ -142,7 +142,7 @@ export default function ProfilePage() {
   }
 
   const handleSaveProfile = async () => {
-    if (!user) return
+  if (!user || uploadingPhoto) return
 
     const ref = doc(db, "users", user.uid)
 
@@ -419,18 +419,24 @@ export default function ProfilePage() {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button
-                  onClick={() => setShowEditModal(false)}
-                  className="text-primary px-4 py-2 rounded-xl border border-primary/20"
-                >
-                  Cancel
-                </button>
+  onClick={() => {
+    if (!uploadingPhoto) setShowEditModal(false)
+  }}
+  disabled={uploadingPhoto}
+  className="text-primary px-4 py-2 rounded-xl border border-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+>
+  Cancel
+</button>
 
                 <button
-                  onClick={handleSaveProfile}
-                  className="px-5 py-2.5 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90 transition"
-                >
-                  Save Changes
-                </button>
+  onClick={() => {
+    if (!uploadingPhoto) handleSaveProfile()
+  }}
+  disabled={uploadingPhoto}
+  className="px-5 py-2.5 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
+>
+  Save Changes
+</button>
               </div>
             </div>
           </div>
