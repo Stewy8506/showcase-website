@@ -69,9 +69,9 @@ export default function ProfilePage() {
                   setEditPhotoThumbURL(data.photoThumbURL ?? "")
 
                   // Auto‑open edit modal on first visit if profile is incomplete
+                  // (DOB is optional)
                   const isIncomplete =
                     !data.fullName ||
-                    !data.dob ||
                     !data.gender ||
                     !data.phoneNumber
 
@@ -193,11 +193,15 @@ export default function ProfilePage() {
       googlePhoto ||
       null
 
+    // Normalize DOB — save entered value, otherwise preserve existing
+    const finalDob =
+      (editDob && editDob.trim() !== "" ? editDob : profile?.dob) || null
+
     await setDoc(
       ref,
       {
         fullName: editFullName || null,
-        dob: editDob || null,
+        dob: finalDob,
         gender: editGender || null,
         phoneNumber: editPhone || null,
         photoURL: finalPhotoURL,
@@ -246,8 +250,8 @@ export default function ProfilePage() {
   }
 
   // Require profile completion for first‑time / incomplete profiles
+  // (DOB is optional)
   const requireCompletion =
-    !profile?.dob ||
     !profile?.gender ||
     !profile?.phoneNumber
 
@@ -529,13 +533,12 @@ export default function ProfilePage() {
                 
                 <button
                   onClick={() => {
-                    if (!uploadingPhoto && editDob && editGender && editPhone) {
+                    if (!uploadingPhoto && editGender && editPhone) {
                       handleSaveProfile()
                     }
                   }}
                   disabled={
                     uploadingPhoto ||
-                    !editDob ||
                     !editGender ||
                     !editPhone
                   }
