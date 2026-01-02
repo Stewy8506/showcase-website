@@ -1,8 +1,35 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
+import { auth } from "@/lib/firebase"
 
 export default function LandingPage() {
+  async function handleGoogleLogin() {
+    try {
+      const provider = new GoogleAuthProvider()
+      await signInWithPopup(auth, provider)
+
+      window.location.href = "/Dashboard"
+    } catch (err) {
+      console.error("Google login failed", err)
+    }
+  }
+
+  function handleGetStarted() {
+    const user = auth.currentUser
+
+    if (user) {
+      // user already logged in → go to dashboard
+      window.location.href = "/Dashboard"
+    } else {
+      // not logged in → go to signup
+      window.location.href = "/signup"
+    }
+  }
+
   return (
     <main className="min-h-screen flex flex-col px-6 md:px-12 py-8 bg-background selection:bg-primary selection:text-primary-foreground">
       {/* Navigation Header */}
@@ -71,7 +98,11 @@ export default function LandingPage() {
       <footer className="w-full max-w-4xl mx-auto flex flex-col items-center gap-8 mb-8">
         <div className="flex items-center gap-4 w-full justify-center">
           {/* Google Sign-in Placeholder Circle */}
-          <div className="bg-white rounded-full p-4 flex items-center justify-center w-16 h-16 shadow-lg">
+          <button
+            onClick={handleGoogleLogin}
+            className="bg-white rounded-full p-4 flex items-center justify-center w-16 h-16 shadow-lg hover:scale-105 transition"
+            aria-label="Sign in with Google"
+          >
             <svg viewBox="0 0 24 24" className="w-8 h-8">
               <path
                 fill="#000000"
@@ -90,15 +121,15 @@ export default function LandingPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-          </div>
+          </button>
 
-          <Link
-            href="/signup"
+          <button
+            onClick={handleGetStarted}
             className="group relative flex items-center justify-between bg-primary text-primary-foreground px-8 py-5 rounded-full text-2xl font-semibold transition-all hover:scale-[1.02] active:scale-95 flex-1 max-w-[400px]"
           >
             <span>Get Started</span>
             <ArrowUpRight className="w-8 h-8 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-          </Link>
+          </button>
         </div>
 
         <p className="text-lg text-foreground/70">

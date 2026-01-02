@@ -1,3 +1,4 @@
+"use client"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
@@ -8,9 +9,38 @@ const navItems = [
   { name: "HELP", active: false },
 ]
 
+import { useState, useRef } from "react"
+
 export function Sidebar() {
+  const [width, setWidth] = useState(160)
+  const resizingRef = useRef(false)
+
+  function startResize() {
+    resizingRef.current = true
+  }
+
+  function stopResize() {
+    resizingRef.current = false
+  }
+
+  function handleResize(e: React.MouseEvent<HTMLDivElement>) {
+    if (!resizingRef.current) return
+    const newWidth = Math.min(260, Math.max(80, e.clientX))
+    setWidth(newWidth)
+  }
+
   return (
-    <div className="w-40 h-full flex flex-col justify-center gap-12 px-4">
+    <div
+      className="relative h-full flex flex-col justify-center gap-12 px-4 pt-6 flex-shrink-0 w-fit"
+    >
+      <div className="flex items-left gap-4 min-w-fit">
+        <span className="font-black italic text-2xl tracking-tighter text-primary hidden sm:inline">
+          Health<span className="text-[#F0BF70]">Care+</span>
+        </span>
+        <span className="sm:hidden font-black italic text-xl tracking-tight text-primary">
+          HC+
+        </span>
+      </div>
       {navItems.map((item) =>
         item.name === "HOME" ? (
           <Link
@@ -23,7 +53,8 @@ export function Sidebar() {
                 : "text-foreground/40 hover:text-foreground",
             )}
           >
-            HOME
+            <span className="hidden sm:inline">{item.name}</span>
+            <span className="sm:hidden text-xs font-bold">{item.name[0]}</span>
           </Link>
         ) : (
           <button
@@ -35,7 +66,8 @@ export function Sidebar() {
                 : "text-foreground/40 hover:text-foreground",
             )}
           >
-            {item.name}
+            <span className="hidden sm:inline">{item.name}</span>
+            <span className="sm:hidden text-xs font-bold">{item.name[0]}</span>
           </button>
         )
       )}

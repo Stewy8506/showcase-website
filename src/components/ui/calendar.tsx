@@ -1,13 +1,34 @@
 "use client"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export function Calendar() {
+export function Calendar({ onDateChange }: { onDateChange?: (date: Date) => void }) {
   const today = new Date()
   const [currentYear, setCurrentYear] = useState(today.getFullYear())
   const [currentMonth, setCurrentMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState(today.getDate())
+
+  // --- Resizable calendar width ---
+  const [width, setWidth] = useState(360)
+  const resizingRef = useRef(false)
+
+  function startResize() {
+    resizingRef.current = true
+  }
+
+  function stopResize() {
+    resizingRef.current = false
+  }
+
+  function handleResize(e: React.MouseEvent<HTMLDivElement>) {
+    if (!resizingRef.current) return
+    // clamp between compact and large calendar sizes
+    const newWidth = Math.min(520, Math.max(220, e.clientX))
+    setWidth(newWidth)
+  }
+
+  const isNarrow = width < 300
 
   const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
 
@@ -58,8 +79,35 @@ export function Calendar() {
   }
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-8 px-4">
+    <div
+      className="relative w-full sm:w-auto"
+      style={{ width }}
+      onMouseMove={handleResize}
+      onMouseUp={stopResize}
+      onMouseLeave={stopResize}
+    >
+      {/* Resize handle (right edge) */}
+      <div
+        onMouseDown={startResize}
+        className="hidden sm:block absolute -right-1 top-0 h-full w-2 cursor-col-resize bg-transparent hover:bg-primary/10"
+      />
+      {/* Compact mobile view — only show highlighted date */}
+      <div className="sm:hidden flex items-center justify-between px-3 py-2 rounded-2xl bg-white border border-primary/10 shadow-sm mb-4">
+        <span className="text-sm font-bold text-primary">
+          {monthLabel.split(" ")[0]} {selectedDate}, {currentYear}
+        </span>
+        <button
+          onClick={() => setSelectedDate(today.getDate())}
+          className="text-xs font-semibold text-primary/60 underline"
+        >
+          Today
+        </button>
+      </div>
+
+      <div className={cn(
+        "hidden sm:flex items-center justify-between",
+        isNarrow ? "mb-4 px-2" : "mb-8 px-4"
+      )}>
         <button
           onClick={goPrevMonth}
           className="text-primary/30 disabled:opacity-30"
@@ -67,7 +115,10 @@ export function Calendar() {
           <ChevronLeft className="w-5 h-5" />
         </button>
 
-        <span className="font-bold text-[14px] text-primary opacity-60">
+        <span className={cn(
+          "font-bold text-primary opacity-60",
+          isNarrow ? "text-[12px]" : "text-[14px]"
+        )}>
           {monthLabel}
         </span>
 
@@ -80,11 +131,17 @@ export function Calendar() {
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-1 text-center">
+      <div className={cn(
+        "hidden sm:grid grid-cols-7 text-center",
+        isNarrow ? "gap-y-[2px]" : "gap-y-1"
+      )}>
         {days.map((day) => (
           <span
             key={day}
-            className="text-[9px] font-bold text-primary/30 mb-2"
+            className={cn(
+              "font-bold text-primary/30",
+              isNarrow ? "text-[8px] mb-1" : "text-[9px] mb-2"
+            )}
           >
             {day}
           </span>
@@ -95,10 +152,16 @@ export function Calendar() {
           return (
             <div key={date} className="flex items-center justify-center">
               <button
-                onClick={() => setSelectedDate(date)}
+                onClick={() => {
+                  setSelectedDate(date)
+                  onDateChange?.(new Date(currentYear, currentMonth, date))
+                }}
                 disabled={isFutureDate}
                 className={cn(
-                  "text-[12px] font-bold w-8 h-8 flex items-center justify-center rounded-full transition-all",
+                  cn(
+                    "font-bold flex items-center justify-center rounded-full transition-all",
+                    isNarrow ? "text-[11px] w-7 h-7" : "text-[12px] w-8 h-8"
+                  ),
                   isFutureDate
                     ? "text-primary/30 opacity-40"
                     : date === selectedDate
