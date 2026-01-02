@@ -5,12 +5,16 @@ import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"
 import { auth } from "@/lib/firebase"
+import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 
 export default function LandingPage() {
   async function handleGoogleLogin() {
     try {
       const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+
+      // back‑fill / ensure Firestore user profile
+      await migrateAuthUserToProfile(result.user)
 
       window.location.href = "/Dashboard"
     } catch (err) {
@@ -76,8 +80,7 @@ export default function LandingPage() {
           <h2 className="text-3xl md:text-4xl font-semibold max-w-md">Be in control of your meds</h2>
           <div className="flex flex-col gap-6 text-lg md:text-xl text-foreground/80 leading-relaxed max-w-lg">
             <p className="font-serif italic">
-              Lorem ipsum dolor sit amet consectetur. Enim ullamcorper at at sit urna. Viverra tincidunt sit proin
-              interdum. Amet turpis libero varius vivamus augue potenti. Tellus augue a id feugiat risus.
+              Sanitas corporis et animi praecipuum bonum est humanae vitae. Sine valetudine enim nec divitiae nec honores nec voluptates vera felicitate fruuntur. Cura salutis igitur omnium rerum potissima habenda est, ut vita integra et beata ducatur.
             </p>
             <p className="text-base text-muted-foreground font-light">Smart Healthcare, for everyone.</p>
           </div>

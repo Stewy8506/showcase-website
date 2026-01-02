@@ -13,6 +13,7 @@ import {
   signInWithPopup
 } from "firebase/auth"
 import { auth } from "@/lib/firebase"
+import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 
 export default function SignUpPage() {
   const [name, setName] = useState("")
@@ -35,6 +36,9 @@ export default function SignUpPage() {
         await updateProfile(cred.user, { displayName: name })
       }
 
+      // back‑fill / ensure Firestore profile
+      await migrateAuthUserToProfile(cred.user)
+
       router.push("/Dashboard")
     } catch (err: any) {
       console.error("Firebase signup error:", err)
@@ -50,7 +54,11 @@ export default function SignUpPage() {
 
     try {
       const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
+      const result = await signInWithPopup(auth, provider)
+
+      // back‑fill / ensure Firestore profile
+      await migrateAuthUserToProfile(result.user)
+
       router.push("/Dashboard")
     } catch (err: any) {
       console.error("Firebase Google sign-in error:", err)

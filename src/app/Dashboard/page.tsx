@@ -19,13 +19,21 @@ import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, signOut } from "firebase/auth"
 import { AnimatePresence, motion } from "framer-motion"
+import { doc, onSnapshot } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const profileRef = useRef<HTMLDivElement | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+
+  const firstName =
+    profile?.firstName ??
+    user?.displayName?.split(" ")[0] ??
+    "Unnamed User"
 
   useEffect(() => {
   function handleClickOutside(e: MouseEvent) {
@@ -47,19 +55,30 @@ export default function Dashboard() {
 }, [showProfileMenu])
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        // not signed in → leave Dashboard
-        router.push("/Landing")
-        return
-      }
+  let profileUnsub: (() => void) | null = null
 
-      // signed in → allow access
-      setUser(u)
+  const unsub = onAuthStateChanged(auth, (u) => {
+    if (!u) {
+      setUser(null)
+      setProfile(null)
+      router.push("/Landing")
+      return
+    }
+
+    setUser(u)
+
+    // Realtime Firestore profile listener
+    const ref = doc(db, "users", u.uid)
+    profileUnsub = onSnapshot(ref, (snap) => {
+      setProfile(snap.exists() ? snap.data() : null)
     })
+  })
 
-    return () => unsub()
-  }, [router])
+  return () => {
+    if (profileUnsub) profileUnsub()
+    unsub()
+  }
+}, [router])
   const [medications, setMedications] = useState([
     { id: 4, name: "Soframycin", dosage: "Lotion", time: "11:00 AM", checked: false },
     { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: false },
@@ -345,9 +364,10 @@ export default function Dashboard() {
               >
               <img
                 src={
-                  user?.photoURL ||
+                  profile?.photoURL ||      // Firestore profile photo (preferred)
+                  user?.photoURL ||         // Fallback: Auth photo
                   user?.providerData?.[0]?.photoURL ||
-                  "/images/home-20page.png"
+                  "/images/home-20page.png" // Final fallback
                 }
                 alt="Profile"
                 className="w-full h-full object-cover"
@@ -358,14 +378,14 @@ export default function Dashboard() {
                 <div className="absolute right-0 mt-2 bg-white rounded-2xl shadow-lg border border-primary/10 w-40 z-50">
                   <div className="px-4 py-3 border-b border-primary/10">
                     <p className="text-xs font-semibold text-primary line-clamp-2">
-                      {user?.displayName || "User"}
+                      {firstName || "User"}
                     </p>
                   </div>
 
                   <button
                     onClick={() => {
                       setShowProfileMenu(false)
-                      router.push("/profile")
+                      router.push("/Profile")
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10"
                   >
@@ -519,21 +539,22 @@ export default function Dashboard() {
 
             {/* Health Overview */}
             <div className="flex-1 flex flex-col overflow-visible">
-              <h2 className="text-3xl font-bold text-primary mb-6 tracking-tight">Health Overview</h2>
+              <h2 className="text-3xl font-bold text-primary mb-4 tracking-tight">Health Overview</h2>
               <div className="flex-1 bg-white rounded-[3rem] p-8 shadow-sm border border-primary/5">
                 <HealthChart />
               </div>
             </div>
           </section>
         </main>
+
         {missedMeds.length > 0 && (
-  <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-2xl bg-red-600 text-white shadow-lg border border-red-400">
-    <p className="text-sm font-semibold">
-      You have {missedMeds.length} missed medication
-      {missedMeds.length > 1 ? "s" : ""}. Please take them as soon as possible.
-    </p>
-  </div>
-)}
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-2xl bg-red-600 text-white shadow-lg border border-red-400">
+            <p className="text-sm font-semibold">
+              You have {missedMeds.length} missed medication
+              {missedMeds.length > 1 ? "s" : ""}. Please take them as soon as possible.
+            </p>
+          </div>
+        )}
         {showUploadModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"

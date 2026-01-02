@@ -1,11 +1,16 @@
-
 "use client"
 import Link from "next/link"
+import { motion } from "framer-motion"
 
 export default function TeamPage() {
   return (
     <main className="min-h-screen w-full flex justify-center px-4 py-12 bg-muted/40">
-      <div className="w-full max-w-6xl rounded-2xl bg-white shadow-xl border border-border p-8 md:p-10">
+      <motion.div
+        className="w-full max-w-6xl rounded-2xl bg-white shadow-xl border border-border p-8 md:p-10"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+      >
         {/* Return Home Button */}
         <Link
           href="/"
@@ -97,7 +102,7 @@ export default function TeamPage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
     </main>
   )
 }
