@@ -8,10 +8,11 @@ interface MedicationCardProps {
   dosage: string
   time: string
   checked?: boolean
+  missed?: boolean
   onToggle?: () => void
 }
 
-export function MedicationCard({ name, dosage, time, checked = false, onToggle }: MedicationCardProps) {
+export function MedicationCard({ name, dosage, time, checked = false, missed = false, onToggle }: MedicationCardProps) {
   // --- Resizable medication card width ---
   const [width, setWidth] = useState(360)
   const resizingRef = useRef(false)
@@ -46,13 +47,22 @@ export function MedicationCard({ name, dosage, time, checked = false, onToggle }
       />
 
       {/* Compact mobile view — only name + tick box */}
-      <div className="sm:hidden flex items-center justify-between rounded-full bg-[#EDF1F5] overflow-hidden shadow-sm px-4 py-3">
+      <div
+        className={cn(
+          "sm:hidden flex items-center justify-between rounded-full bg-[#EDF1F5] overflow-hidden px-4 py-3 border-2 transition-shadow",
+          !checked && missed
+            ? "border-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.45)]"
+            : "border-transparent shadow-none"
+        )}
+      >
         <span className="font-bold text-sm text-primary truncate">{name}</span>
         <button
           onClick={() => onToggle?.()}
           className={cn(
-            "ml-3 w-8 h-8 flex items-center justify-center rounded-full transition-colors",
-            checked ? "bg-transparent border border-primary/30" : "bg-[#F0BF70]"
+            "ml-3 w-8 h-8 flex items-center justify-center rounded-full transition-colors border",
+            checked
+              ? "bg-transparent border-primary/30"
+              : "bg-[#F0BF70] border-transparent"
           )}
           aria-label="Toggle medication"
         >
@@ -76,7 +86,14 @@ export function MedicationCard({ name, dosage, time, checked = false, onToggle }
           <span className="font-bold text-xs text-primary">{name}</span>
         </div>
       ) : (
-        <div className="hidden sm:flex items-stretch rounded-full bg-[#EDF1F5] overflow-hidden shadow-sm group">
+        <div
+          className={cn(
+            "hidden sm:flex items-stretch rounded-full bg-[#EDF1F5] overflow-hidden group border-2 transition-shadow",
+            !checked && missed
+              ? "border-red-500 shadow-[0_0_0_5px_rgba(239,68,68,0.15)]"
+              : "border-transparent shadow-none"
+          )}
+        >
           <div className={cn("flex-1 flex flex-col justify-center", isNarrow ? "py-3 px-4" : "py-4 px-8")}>
             <span className="font-bold text-sm text-primary truncate">
               {name}, {dosage}
@@ -90,8 +107,10 @@ export function MedicationCard({ name, dosage, time, checked = false, onToggle }
             onClick={() => onToggle?.()}
             className={cn(
               (isNarrow ? "w-12" : "w-16"),
-              "flex items-center justify-center transition-colors cursor-pointer",
-              checked ? "bg-transparent border-l border-white/20" : "bg-[#F0BF70]"
+              "flex items-center justify-center transition-colors cursor-pointer border-l",
+              checked
+                ? "bg-transparent border-white/20"
+                : "bg-[#F0BF70] border-transparent"
             )}
           >
             {!checked && <Check className="w-5 h-5 text-black" strokeWidth={3} />}

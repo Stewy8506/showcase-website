@@ -17,15 +17,19 @@ import { Sidebar } from "@/components/ui/sidebar"
 import { Calendar } from "@/components/ui/calendar"
 import { MedicationCard } from "@/components/ui/medication-card"
 import { HealthChart } from "@/components/ui/health-chart"
+import { SearchBar } from "@/components/ui/searchbar"
+import { NotificationsBell } from "@/components/ui/notifications-bell"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, signOut } from "firebase/auth"
+import { AnimatePresence, motion } from "framer-motion"
 
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -40,23 +44,103 @@ export default function Dashboard() {
     { id: 3, name: "Creatine", dosage: "5mg", time: "09:00 PM", checked: false },
 
   ])
+  // Helper: convert "hh:mm AM/PM" to minutes since midnight
+  function timeToMinutes(time: string) {
+    // expects format like "04:00 PM"
+    const [t, period] = time.split(" ")
+    const [h, m] = t.split(":").map(Number)
+
+    let hours = h % 12
+    if (period === "PM") hours += 12
+
+    return hours * 60 + m
+  }
+
+  // Helper: get current time in minutes since midnight
+  function nowToMinutes() {
+    const d = new Date()
+    return d.getHours() * 60 + d.getMinutes()
+  }
+
   const toggleMedication = (id: number) => {
-    setMedications((items) =>
-      items.map((m) =>
+    setMedications(items => {
+      const updated = items.map(m =>
         m.id === id ? { ...m, checked: !m.checked } : m
       )
-    )
+
+      const reordered = [...updated].sort((a, b) => {
+        // unchecked first, checked at the bottom
+        if (a.checked !== b.checked) {
+          return Number(a.checked) - Number(b.checked)
+        }
+
+        // when BOTH are unchecked → sort by time of consumption
+        if (!a.checked && !b.checked) {
+          return timeToMinutes(a.time) - timeToMinutes(b.time)
+        }
+
+        // when both are checked → preserve relative order
+        return 0
+      })
+
+      return reordered
+    })
   }
   const checkedCount = medications.filter((m) => m.checked).length
-  const [showNotifications, setShowNotifications] = useState(false)
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "Medication Reminder", text: "Probiotic at 4:00 PM", icon: "clock" },
-    { id: 2, title: "Low Supply Alert", text: "Creatine running low", icon: "alert" },
-  ])
-  const [removingId, setRemovingId] = useState<number | null>(null)
-  const [showMobileSearch, setShowMobileSearch] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const [missedMeds, setMissedMeds] = useState<any[]>([])
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  useEffect(() => {
+    function computeNotifications() {
+      const now = nowToMinutes()
+
+      const unchecked = medications.filter(m => !m.checked)
+
+      const missed = unchecked
+        .filter(m => timeToMinutes(m.time) < now)
+        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
+        setMissedMeds(missed)
+
+      const upcoming = unchecked
+        .filter(m => timeToMinutes(m.time) >= now)
+        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
+
+      const next = upcoming.length > 0 ? upcoming[0] : null
+
+      const list: any[] = []
+
+      // Missed medicines (red alert items)
+      missed.forEach(m => {
+        list.push({
+          id: `missed-${m.id}`,
+          title: "Missed Medicine",
+          text: `${m.name} — scheduled at ${m.time}`,
+          icon: "alert",
+          missed: true,
+        })
+      })
+
+      // Next upcoming medicine
+      if (next) {
+        list.push({
+          id: `next-${next.id}`,
+          title: "Next Medicine",
+          text: `${next.name} at ${next.time}`,
+          icon: "clock",
+          missed: false,
+        })
+      }
+
+      setNotifications(list)
+    }
+
+    // Compute now + refresh every minute
+    computeNotifications()
+    const t = setInterval(computeNotifications, 60 * 1000)
+    return () => clearInterval(t)
+  }, [medications, selectedDate])
+
+  
 
   function handleCalendarDateChange(date: Date) {
     setSelectedDate(date)
@@ -92,8 +176,6 @@ export default function Dashboard() {
     setShowUploadModal(false)
     router.push("/analysis")
   }
-
-  const notifRef = useRef<HTMLDivElement>(null)
 
   // --- Resizable Left Column (Calendar + Medications) ---
   const [leftWidth, setLeftWidth] = useState(420)
@@ -173,21 +255,7 @@ export default function Dashboard() {
     }
   }, [medHeaderGap])
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
-        setShowNotifications(false)
-      }
-    }
-
-    if (showNotifications) {
-      document.addEventListener("mousedown", handleClickOutside)
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [showNotifications])
+  
 
   return (
     <div className="dashboard-theme flex h-screen bg-background overflow-x-auto overflow-y-auto font-sans">
@@ -204,115 +272,15 @@ export default function Dashboard() {
           </button>
 
           <div className="flex-1 flex justify-center -ml-2 lg:-ml-20">
-            {/* Desktop / tablet search bar */}
-            <div className="relative max-w-2xl w-full min-w-0 hidden sm:block">
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-primary/20" />
-              <input
-                type="text"
-                placeholder="Lorem ipsum dolor sit amet consectetur."
-                className="w-full bg-white border border-primary/5 rounded-full py-4 pl-16 pr-8 text-sm text-black placeholder:italic focus:outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
-              />
-            </div>
-
-            {/* Mobile search icon */}
-            <button
-              onClick={() => setShowMobileSearch(true)}
-              className="sm:hidden p-3 rounded-full hover:bg-muted active:bg-muted/70 transition-colors"
-              aria-label="Open search"
-            >
-              <Search className="w-6 h-6 text-primary" strokeWidth={1.5} />
-            </button>
+            <SearchBar />
           </div>
 
-          {showMobileSearch && (
-            <div className="sm:hidden fixed inset-0 z-50 bg-white/80 backdrop-blur-md p-4 flex items-start">
-              <div className="relative w-full bg-white rounded-full border border-primary/10 shadow-sm">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/30" />
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Search…"
-                  className="w-full rounded-full py-3 pl-12 pr-10 text-sm text-black placeholder:italic focus:outline-none"
-                />
-                <button
-                  onClick={() => setShowMobileSearch(false)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full hover:bg-primary/5"
-                  aria-label="Close search"
-                >
-                  <X className="w-4 h-4 text-primary" strokeWidth={2} />
-                </button>
-              </div>
-            </div>
-          )}
-
           <div className="flex items-center gap-6">
-            <div className="relative" ref={notifRef}>
-              <button
-                onClick={() => setShowNotifications(!showNotifications)}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-              >
-                <Bell className="w-6 h-6 text-primary" strokeWidth={1.5} />
-              </button>
-              {notifications.length > 0 && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-secondary rounded-full border-2 border-background" />
-              )}
-
-              {showNotifications && (
-                <div className="absolute right-0 mt-3 w-80 bg-white rounded-3xl shadow-lg border border-primary/5 p-4 z-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-bold text-sm text-primary">Notifications</h4>
-                    <button
-                      onClick={() => setNotifications([])}
-                      className="text-xs font-semibold text-primary/70 hover:text-primary"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-3">
-                    {notifications.length === 0 ? (
-                      <p className="text-xs text-primary/60 italic px-1">No notifications</p>
-                    ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`flex items-start gap-3 p-3 rounded-2xl bg-primary/5 transition-all duration-200 ${
-                            removingId === n.id ? "opacity-0 scale-95 translate-y-1" : "opacity-100"
-                          }`}
-                        >
-                          {n.icon === "clock" ? (
-                            <Clock className="w-4 h-4 text-primary mt-0.5" strokeWidth={1.5} />
-                          ) : (
-                            <AlertCircle className="w-4 h-4 text-primary mt-0.5" strokeWidth={1.5} />
-                          )}
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-primary">{n.title}</p>
-                            <p className="text-xs text-primary/70">{n.text}</p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              setRemovingId(n.id)
-                              setTimeout(() => {
-                                setNotifications((prev) => prev.filter((x) => x.id !== n.id))
-                                setRemovingId(null)
-                              }, 180)
-                            }}
-                            className="shrink-0 p-1 rounded-full hover:bg-primary/20 active:bg-primary/30"
-                            aria-label="Dismiss notification"
-                          >
-                            <X className="w-3 h-3 text-primary" strokeWidth={2} />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <button className="mt-3 w-full text-xs font-semibold text-primary/80 hover:text-primary transition-colors">
-                    View all notifications
-                  </button>
-                </div>
-              )}
-            </div>
+            <NotificationsBell
+              notifications={notifications}
+              setNotifications={setNotifications}
+              hasMissed={notifications.some(n => n.missed)}
+            />
             <div className="relative">
               <button
                 onClick={() => setShowProfileMenu((v) => !v)}
@@ -397,16 +365,27 @@ export default function Dashboard() {
               </div>
 
               <div className="flex flex-col gap-3">
-                {medications.map((m) => (
-                  <MedicationCard
-                    key={m.id}
-                    name={m.name}
-                    dosage={m.dosage}
-                    time={m.time}
-                    checked={m.checked}
-                    onToggle={() => toggleMedication(m.id)}
-                  />
-                ))}
+                <AnimatePresence initial={false}>
+                  {medications.map((m) => (
+                    <motion.div
+                      key={m.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.98, y: 4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                      transition={{ duration: 0.18, ease: "easeOut" }}
+                    >
+                    <MedicationCard
+                      name={m.name}
+                      dosage={m.dosage}
+                      time={m.time}
+                      checked={m.checked}
+                      missed={missedMeds.some(x => x.id === m.id)}
+                      onToggle={() => toggleMedication(m.id)}
+                    />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             </div>
           </section>
@@ -491,6 +470,14 @@ export default function Dashboard() {
             </div>
           </section>
         </main>
+        {missedMeds.length > 0 && (
+  <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-2xl bg-red-600 text-white shadow-lg border border-red-400">
+    <p className="text-sm font-semibold">
+      You have {missedMeds.length} missed medication
+      {missedMeds.length > 1 ? "s" : ""}. Please take them as soon as possible.
+    </p>
+  </div>
+)}
         {showUploadModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
