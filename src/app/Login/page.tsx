@@ -81,7 +81,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] flex flex-col gap-8">
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Log In</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Sign In</h1>
           <p className="text-muted-foreground">Welcome back to Smart Meds.</p>
         </div>
 

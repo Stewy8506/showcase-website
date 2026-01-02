@@ -48,10 +48,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u || null)
+      if (!u) {
+        // not signed in → leave Dashboard
+        router.push("/Landing")
+        return
+      }
+
+      // signed in → allow access
+      setUser(u)
     })
+
     return () => unsub()
-  }, [])
+  }, [router])
   const [medications, setMedications] = useState([
     { id: 4, name: "Soframycin", dosage: "Lotion", time: "11:00 AM", checked: false },
     { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: false },

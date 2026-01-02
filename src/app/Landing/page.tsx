@@ -26,7 +26,7 @@ export default function LandingPage() {
       window.location.href = "/Dashboard"
     } else {
       // not logged in → go to signup
-      window.location.href = "/signup"
+      window.location.href = "/Signup"
     }
   }
 
@@ -56,7 +56,7 @@ export default function LandingPage() {
             Home
           </Link>
           <span className="text-border">|</span>
-          <Link href="/team" className="hover:text-foreground transition-colors">
+          <Link href="/Team" className="hover:text-foreground transition-colors">
             Team
           </Link>
           <span className="text-border">|</span>
