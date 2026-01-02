@@ -1,16 +1,11 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
 import {
-  Search,
-  Bell,
   Plus,
   FileText,
   MessageSquare,
   Link2,
   AlertCircle,
-  ChevronRight,
-  ChevronDown,
-  Clock,
   X,
 } from "lucide-react"
 import { Sidebar } from "@/components/ui/sidebar"
@@ -29,7 +24,27 @@ export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const profileRef = useRef<HTMLDivElement | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+
+  useEffect(() => {
+  function handleClickOutside(e: MouseEvent) {
+    if (!profileRef.current) return
+
+    // if click is outside profile dropdown → close it
+    if (!profileRef.current.contains(e.target as Node)) {
+      setShowProfileMenu(false)
+    }
+  }
+
+  if (showProfileMenu) {
+    document.addEventListener("mousedown", handleClickOutside)
+  }
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside)
+  }
+}, [showProfileMenu])
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
@@ -278,26 +293,26 @@ export default function Dashboard() {
   </button>
 
   {showAddMenu && (
-    <div className="absolute left-0 mt-2 bg-white rounded-2xl shadow-lg border border-primary/10 w-64 z-50">
+    <div className="absolute left-0 mt-2 bg-white rounded-2xl shadow-lg border border-primary/10 w-50 z-50">
       
       <button
         onClick={() => {
           setShowAddMenu(false)
-          console.log("Add medication manually")
+          console.log("Add medication")
         }}
         className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-t-2xl"
       >
-        Add Medication Manually
+        Add Medication
       </button>
 
       <button
         onClick={() => {
           setShowAddMenu(false)
-          console.log("Add health information manually")
+          console.log("Add health information")
         }}
         className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-b-2xl"
       >
-        Add Health Information Manually
+        Add Health Information
       </button>
 
     </div>
@@ -314,7 +329,7 @@ export default function Dashboard() {
               setNotifications={setNotifications}
               hasMissed={notifications.some(n => n.missed)}
             />
-            <div className="relative">
+            <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setShowProfileMenu((v) => !v)}
                 className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md"

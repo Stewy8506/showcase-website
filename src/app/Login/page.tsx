@@ -1,24 +1,23 @@
 "use client"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { auth } from "@/lib/firebase"
 import {
-  createUserWithEmailAndPassword,
-  updateProfile,
+  signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth"
-import { auth } from "@/lib/firebase"
 
-export default function SignUpPage() {
-  const [name, setName] = useState("")
+export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
 
@@ -28,17 +27,19 @@ export default function SignUpPage() {
     setSubmitting(true)
 
     try {
-      const cred = await createUserWithEmailAndPassword(auth, email, password)
-
-      // set display name
-      if (name) {
-        await updateProfile(cred.user, { displayName: name })
-      }
-
+      await signInWithEmailAndPassword(auth, email, password)
       router.push("/Dashboard")
     } catch (err: any) {
-      console.error("Firebase signup error:", err)
-      alert(err?.message ?? "Failed to create account")
+      console.error("Firebase login error:", err)
+
+      // Show friendly login error overlay
+      const message =
+        err?.code === "auth/invalid-credential" ||
+        err?.code === "auth/wrong-password"
+          ? "Incorrect email or password"
+          : err?.message ?? "Failed to log in"
+
+      setError(message)
     } finally {
       setSubmitting(false)
     }
@@ -53,8 +54,14 @@ export default function SignUpPage() {
       await signInWithPopup(auth, provider)
       router.push("/Dashboard")
     } catch (err: any) {
-      console.error("Firebase Google sign-in error:", err)
-      alert(err?.message ?? "Failed to sign in with Google")
+      console.error("Firebase Google sign‑in error:", err)
+
+      const message =
+        err?.code === "auth/popup-closed-by-user"
+          ? "Google sign‑in cancelled"
+          : err?.message ?? "Failed to sign in with Google"
+
+      setError(message)
     } finally {
       setSubmitting(false)
     }
@@ -74,27 +81,13 @@ export default function SignUpPage() {
       <div className="w-full max-w-[400px] flex flex-col gap-8">
         {/* Header */}
         <div className="flex flex-col items-center text-center gap-2">
-          <h1 className="text-3xl font-bold tracking-tight">Sign Up</h1>
-          <p className="text-muted-foreground">Smart Meds, for everyone.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Log In</h1>
+          <p className="text-muted-foreground">Welcome back to Smart Meds.</p>
         </div>
 
         {/* Form */}
         <form className="flex flex-col gap-6" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-4">
-            <Field>
-              <FieldLabel htmlFor="name">Full Name</FieldLabel>
-              <FieldContent>
-                <Input
-                  id="name"
-                  placeholder="Jane Doe"
-                  required
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="rounded-xl h-12 border border-white/20"
-                />
-              </FieldContent>
-            </Field>
-
             <Field>
               <FieldLabel htmlFor="email">Email Address</FieldLabel>
               <FieldContent>
@@ -131,12 +124,12 @@ export default function SignUpPage() {
             disabled={submitting}
             className="w-full h-14 rounded-full text-lg font-semibold group"
           >
-            Create Account
+            Log In
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Button>
         </form>
 
-        {/* Social Link / Divider */}
+        {/* Divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-border" />
@@ -146,6 +139,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        {/* Google Button */}
         <Button
           type="button"
           onClick={handleGoogleSignIn}
@@ -176,12 +170,27 @@ export default function SignUpPage() {
 
         {/* Footer */}
         <p className="text-center text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/Login" className="text-foreground font-bold hover:underline underline-offset-4">
-            Sign in
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-foreground font-bold hover:underline underline-offset-4">
+            Create one
           </Link>
         </p>
       </div>
+
+      {error && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="px-4 py-2 rounded-xl bg-red-500/80 text-white border border-red-400 shadow-lg backdrop-blur-sm flex items-center gap-2">
+            <AlertCircle className="w-4 h-4" />
+            <span className="text-xs font-semibold">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/20 text-[10px]"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

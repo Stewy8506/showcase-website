@@ -60,7 +60,10 @@ export default function LandingPage() {
             Team
           </Link>
           <span className="text-border">|</span>
-          <Link href="/contact" className="hover:text-foreground transition-colors">
+          <Link
+            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            className="hover:text-foreground transition-colors"
+          >
             Contact
           </Link>
         </nav>
@@ -134,7 +137,7 @@ export default function LandingPage() {
 
         <p className="text-lg text-foreground/70">
           Already have an Account?{" "}
-          <Link href="/login" className="text-foreground font-bold hover:underline underline-offset-4">
+          <Link href="/Login" className="text-foreground font-bold hover:underline underline-offset-4">
             Sign in
           </Link>
         </p>
