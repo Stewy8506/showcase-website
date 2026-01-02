@@ -155,6 +155,7 @@ export default function Dashboard() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
 
   function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -267,9 +268,41 @@ export default function Dashboard() {
         {/* Header */}
         <header className="relative flex items-center gap-6 w-full max-w-[1280px] mx-auto px-4">
     
-          <button className="p-2 hover:bg-muted rounded-full transition-colors">
-            <Plus className="w-8 h-8 text-primary" strokeWidth={1.5} />
-          </button>
+          <div className="relative">
+  <button
+    onClick={() => setShowAddMenu(v => !v)}
+    className="p-2 hover:bg-muted rounded-full transition-colors"
+    aria-label="Open add menu"
+  >
+    <Plus className="w-8 h-8 text-primary" strokeWidth={1.5} />
+  </button>
+
+  {showAddMenu && (
+    <div className="absolute left-0 mt-2 bg-white rounded-2xl shadow-lg border border-primary/10 w-64 z-50">
+      
+      <button
+        onClick={() => {
+          setShowAddMenu(false)
+          console.log("Add medication manually")
+        }}
+        className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-t-2xl"
+      >
+        Add Medication Manually
+      </button>
+
+      <button
+        onClick={() => {
+          setShowAddMenu(false)
+          console.log("Add health information manually")
+        }}
+        className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-b-2xl"
+      >
+        Add Health Information Manually
+      </button>
+
+    </div>
+  )}
+</div>
 
           <div className="flex-1 flex justify-center -ml-2 lg:-ml-20">
             <SearchBar />
