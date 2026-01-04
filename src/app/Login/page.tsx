@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Field, FieldContent, FieldLabel } from "@/components/ui/field"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { auth } from "@/lib/firebase"
 import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  getAdditionalUserInfo
+  getAdditionalUserInfo,
+  onAuthStateChanged
 } from "firebase/auth"
 
 export default function LoginPage() {
@@ -22,6 +23,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
 
   const router = useRouter()
+
+  // If user is already signed in → redirect to Dashboard
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, user => {
+      if (user) {
+        router.replace("/Dashboard")
+      }
+    })
+
+    return () => unsub()
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

@@ -13,7 +13,7 @@ export default function TeamPage() {
       >
         {/* Return Home Button */}
         <Link
-          href="/"
+          href="/Landing"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           ← Return to home
