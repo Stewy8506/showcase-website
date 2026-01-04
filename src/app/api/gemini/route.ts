@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 export async function POST(req: Request) {
   try {
     const { symptoms } = await req.json();
+    console.log("Gemini key exists:", !!process.env.GEMINI_API_KEY);
 
     if (!symptoms) {
       return NextResponse.json({ error: "No symptoms provided" }, { status: 400 });
