@@ -498,7 +498,7 @@ export default function Dashboard() {
                   action.label === "Symptoms Ai" ? (
                     <Link
                       key={i}
-                      href="/chat"
+                      href="/Chat"
                       className="flex-1 aspect-square max-w-[255px]"
                     >
                       <div className="relative overflow-hidden cursor-pointer group w-full h-full bg-white rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 shadow-sm hover:shadow-md transition-all border border-primary/5">
