@@ -226,7 +226,7 @@ export default function Dashboard() {
 
     // Simulate upload complete → close modal + redirect
     setShowUploadModal(false)
-    router.push("/analysis")
+    router.push("/Analysis")
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -235,7 +235,7 @@ export default function Dashboard() {
 
     // Simulate upload complete → close modal + redirect
     setShowUploadModal(false)
-    router.push("/analysis")
+    router.push("/Analysis")
   }
 
   // --- Resizable Left Column (Calendar + Medications) ---
