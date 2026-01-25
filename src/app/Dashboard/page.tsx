@@ -39,7 +39,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<any>(null)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const profileRef = useRef<HTMLDivElement | null>(null)
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
   const firstName =
     profile?.firstName ??
