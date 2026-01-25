@@ -218,6 +218,7 @@ export default function Dashboard() {
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
   const [showAnalysisModal, setShowAnalysisModal] = useState(false)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
 
@@ -704,9 +705,80 @@ export default function Dashboard() {
                 <p className="text-xs text-primary/60 mb-4">File: {uploadedFileName}</p>
               )}
 
+              {/* Hint for editing */}
+              <p className="text-xs text-primary/60 mb-2">
+                Click ✏️ to edit any incorrect AI-detected information
+              </p>
+
               <div className="flex-1 overflow-y-auto pr-2">
-                <div className="prose prose-sm max-w-none text-primary/90 whitespace-pre-wrap">
-                  {analysisResult}
+                <div className="flex flex-col gap-4 text-sm text-primary/90">
+                  {analysisResult
+                    .split(/\n\s*\n/)
+                    .map((block, index) => {
+                      const lines = block.split("\n")
+                      const nameLine = lines.find(l =>
+                        l.toLowerCase().startsWith("medicine name")
+                      )
+                      const name = nameLine
+                        ? nameLine.split(":").slice(1).join(":").trim()
+                        : `Medicine ${index + 1}`
+                      // Make details editable: use state for each block
+                      // We'll use a local state for all blocks for simplicity
+                      // But here, for each render, we need to keep the details as mutable array
+                      // So we use a ref array to store the details for each card
+                      // For now, keep details as a local variable (will mutate in input onChange)
+                      const details = lines.filter(l => l !== nameLine)
+                      return (
+                        <div
+                          key={index}
+                          className="relative rounded-2xl border border-primary/10 bg-primary/5 p-4 shadow-sm"
+                        >
+                          {/* Edit button */}
+                          <button
+                            onClick={() =>
+                              setEditingIndex(editingIndex === index ? null : index)
+                            }
+                            className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-primary/10"
+                            aria-label="Edit medicine"
+                          >
+                            ✏️
+                          </button>
+
+                          {/* Medicine title */}
+                          <h4 className="text-base font-bold text-primary mb-3">
+                            {index + 1}. {name}
+                          </h4>
+
+                          {/* Editable / Read-only fields */}
+                          <div className="space-y-2">
+                            {details.map((d, i) => {
+                              const [label, ...rest] = d.split(":")
+                              const value = rest.join(":").trim()
+
+                              return (
+                                <div key={i} className="flex items-center gap-2">
+                                  <span className="font-medium min-w-[130px]">
+                                    {label.replace(/^Medicine\s+/i, "")}:
+                                  </span>
+
+                                  {editingIndex === index ? (
+                                    <input
+                                      defaultValue={value}
+                                      className="flex-1 rounded-lg border border-primary/20 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                      onChange={(e) => {
+                                        details[i] = `${label}: ${e.target.value}`
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-sm">{value}</span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
                 </div>
               </div>
 

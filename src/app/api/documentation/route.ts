@@ -48,13 +48,16 @@ export async function POST(req: Request) {
 Document Name: ${file.name}
 Document Type: ${mimeType}
 
-Please provide:
-1. Medicine name
-2. Medicine dosage
-3. Medicine frequency
-4. Medicine duration
-5. Medicine instructions
+Please provide the information in plain text only.
+Do NOT use markdown, bold text, asterisks, or bullet symbols.
 
+Return the result in this exact format:
+
+Medicine Name:
+Medicine Dosage:
+Medicine Frequency:
+Medicine Duration:
+Medicine Instructions:
 
 Be concise but thorough. If any information is not available in the document, clearly state "Not specified" for that item.`;
 
