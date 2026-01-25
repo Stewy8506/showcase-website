@@ -132,7 +132,7 @@ const MedicalChatbot: React.FC = () => {
       {/* Back to Dashboard Button */}
       <Link
         href="/Dashboard"
-        className="absolute top-8 left-8 flex items-center gap-2 text-[#0f172a] hover:text-primary/40  transition-colors group z-50"
+        className="absolute top-8 left-8 flex items-center gap-2 text-[#0f172a] hover:text-primary/90  transition-colors group z-50"
       >
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Dashboard
