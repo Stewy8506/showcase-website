@@ -418,7 +418,7 @@ export default function Dashboard() {
                       } catch (err) {
                         console.error("Error during logout:", err)
                       } finally {
-                        router.push("/Landing") // always redirect to landing
+                        router.push("/") // always redirect to landing
                       }
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-b-2xl"
