@@ -23,11 +23,14 @@ export async function POST(req: Request) {
               parts: [
                 {
                   text: `Based on these symptoms: "${symptoms}", suggest the most appropriate type of doctor to visit.
-
+                    Provide your response in the following format:
                     1. First line: Doctor type
                     2. 2-3 sentence explanation
                     3. Medical disclaimer
 
+                    Never include the numbers in your response.
+                    There should always be a line gap between the doctor type, explanation, and disclaimer.
+                    Use this disclaimer: "This information is for general guidance only and does not constitute medical advice. Always consult with a qualified healthcare professional for any health concerns or before making any decisions related to your health or treatment."
                     Be concise and professional.`,
                 },
               ],

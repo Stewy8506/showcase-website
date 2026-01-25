@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, MapPin, MessageCircle, User, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 interface Message {
   id: string;
@@ -128,8 +129,16 @@ const MedicalChatbot: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-teal-50 via-white to-amber-50">
+      {/* Back to Dashboard Button */}
+      <Link
+        href="/Dashboard"
+        className="absolute top-8 left-8 flex items-center gap-2 text-[#0f172a] hover:text-primary/40  transition-colors group z-50"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        Back to Dashboard
+      </Link>
       {/* Sidebar */}
-      <div className="hidden lg:flex lg:flex-col w-80 bg-white border-r border-gray-200 shadow-sm">
+      <div className="hidden lg:flex lg:flex-col w-80 bg-white border-r border-gray-200 shadow-sm pt-16">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
@@ -232,7 +241,33 @@ const MedicalChatbot: React.FC = () => {
                       ? 'bg-teal-600 text-white' 
                       : 'bg-white shadow-sm border border-gray-200 text-gray-800'
                   }`}>
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      (() => {
+                        const lines = message.content.split('\n');
+                        const firstLine = lines[0];
+                        const lastLine = lines.length > 1 ? lines[lines.length - 1] : '';
+                        const middleLines = lines.slice(1, lines.length > 1 ? -1 : undefined);
+                        // Do not bold the first line for the initial welcome message
+                        const isWelcome = message.id === '1' && message.role === 'assistant';
+                        return (
+                          <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                            {isWelcome ? (
+                              <>{firstLine}</>
+                            ) : (
+                              <span className="font-bold">{firstLine}</span>
+                            )}
+                            {middleLines.length > 0 && (
+                              <><br />{middleLines.join('\n')}<br /></>
+                            )}
+                            {lastLine && lastLine !== firstLine && (
+                              <span className="block italic text-xs mt-2">{lastLine}</span>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+                    )}
                     {message.doctorType && message.role === 'assistant' && (
                       <a
                         href={getGoogleMapsLink(message.doctorType)}
