@@ -56,6 +56,22 @@ export function Sidebar() {
             <span className="hidden sm:inline">{item.name}</span>
             <span className="sm:hidden text-xs font-bold">{item.name[0]}</span>
           </Link>
+        ) : item.name === "HELP" ? (
+          <Link
+            key="HELP"
+            href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "text-[11px] font-bold tracking-[0.2em] text-left transition-colors",
+              item.active
+                ? "bg-primary text-white py-3 px-10 rounded-full -ml-12 w-[calc(100%+2rem)] shadow-[0_10px_20px_rgba(25,60,60,0.3)]"
+                : "text-foreground/40 hover:text-foreground",
+            )}
+          >
+            <span className="hidden sm:inline">{item.name}</span>
+            <span className="sm:hidden text-xs font-bold">{item.name[0]}</span>
+          </Link>
         ) : (
           <button
             key={item.name}

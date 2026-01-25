@@ -112,6 +112,7 @@ export default function Dashboard() {
     name: string
     dosage: string
     frequency: string
+    time: string        // e.g. "08:00"
     checked: boolean
     date: Timestamp
   }
@@ -200,10 +201,11 @@ export default function Dashboard() {
         name: med.name,
         dosage: med.dosage,
         frequency: med.frequency,
+        time: "08:00", // default time (can be edited later)
         duration: med.duration,
         instructions: med.instructions,
         checked: false,
-        date: Timestamp.fromDate(selectedDate || new Date()),
+        date: Timestamp.fromDate(selectedDate),
         createdAt: Timestamp.now(),
       })
     } catch (err) {
@@ -211,6 +213,72 @@ export default function Dashboard() {
       alert("Failed to save medicine to Firestore")
     }
   }
+  // --- Time helpers ---
+  function timeToMinutes(time?: string) {
+    if (!time || typeof time !== "string") {
+      // default to end of day so it is neither missed nor upcoming
+      return 24 * 60
+    }
+
+    const [h, m] = time.split(":").map(Number)
+
+    if (isNaN(h) || isNaN(m)) {
+      return 24 * 60
+    }
+
+    return h * 60 + m
+  }
+
+  function nowToMinutes() {
+    const d = new Date()
+    return d.getHours() * 60 + d.getMinutes()
+  }
+
+  // --- Notification computation ---
+  useEffect(() => {
+    if (!medications.length) {
+      setNotifications([])
+      setMissedMeds([])
+      return
+    }
+
+    const now = nowToMinutes()
+    const unchecked = medications.filter(m => !m.checked)
+
+    const missed = unchecked.filter(
+      m => m.time && timeToMinutes(m.time) < now
+    )
+
+    const upcoming = unchecked
+      .filter(m => m.time)
+      .filter(m => timeToMinutes(m.time) >= now)
+      .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
+
+    const list: any[] = []
+
+    missed.forEach(m => {
+      list.push({
+        id: `missed-${m.id}`,
+        title: "Missed Medication",
+        text: `${m.name} at ${m.time}`,
+        icon: "alert",
+        missed: true,
+      })
+    })
+
+    if (upcoming[0]) {
+      list.push({
+        id: `next-${upcoming[0].id}`,
+        title: "Next Medication",
+        text: `${upcoming[0].name} at ${upcoming[0].time}`,
+        icon: "clock",
+        missed: false,
+      })
+    }
+
+    setMissedMeds(missed)
+    setNotifications(list)
+  }, [medications])
   const [showAnalysisModal, setShowAnalysisModal] = useState(false)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
 
@@ -501,7 +569,7 @@ export default function Dashboard() {
                       <MedicationCard
                         name={m.name}
                         dosage={m.dosage}
-                        time={m.date?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "N/A"}
+                        time={m.time}
                         checked={m.checked}
                         onToggle={() => toggleMedication(m.id)}
                       />
@@ -593,7 +661,15 @@ export default function Dashboard() {
           </section>
         </main>
 
-        {/* Missed meds banner removed temporarily (relies on time-based logic) */}
+        {/* Missed meds banner */}
+        {missedMeds.length > 0 && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-2xl bg-red-600 text-white shadow-lg">
+            <p className="text-sm font-semibold">
+              You have {missedMeds.length} missed medication
+              {missedMeds.length > 1 ? "s" : ""}.
+            </p>
+          </div>
+        )}
         {showUploadModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
