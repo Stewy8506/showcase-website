@@ -141,7 +141,7 @@ export default function MedicineCentrePage() {
               .map((med) => (
                 <div
                   key={med.id}
-                  className="border border-border rounded-lg p-4 bg-primary/10"
+                  className="border border-border rounded-lg p-4 bg-primary/2"
                 >
                   {editingId === med.id ? (
                     <>
@@ -258,37 +258,42 @@ export default function MedicineCentrePage() {
                     </>
                   ) : (
                     <>
-                      <h3 className="text-lg font-semibold">{med.name}</h3>
-                      <p>Dosage: {med.dosage}</p>
-                      <p>Frequency: {med.frequency}</p>
-                      <p>Duration: {med.duration}</p>
-                      <p>Instructions: {med.instructions}</p>
-                      {med.reminderTimes && (
-                        <p>
-                          Reminders: {med.reminderTimes.join(", ")}
-                        </p>
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditingId(med.id);
-                          setFormData({
-                            name: med.name || "",
-                            dosage: med.dosage || "",
-                            frequency: med.frequency || "",
-                            duration: med.duration || "",
-                            instructions: med.instructions || "",
-                            reminderTimes:
-                              med.reminderTimes?.length
-                                ? med.reminderTimes
-                                : getReminderTimes(med.frequency),
-                          });
-                        }}
-                        aria-label="Edit medicine"
-                      >
-                        <Edit size={18} />
-                      </Button>
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-lg font-semibold">{med.name}</h3>
+                          <p>Dosage: {med.dosage}</p>
+                          <p>Frequency: {med.frequency}</p>
+                          <p>Duration: {med.duration}</p>
+                          <p>Instructions: {med.instructions}</p>
+                          {med.reminderTimes && (
+                            <p>
+                              Reminders: {med.reminderTimes.join(", ")}
+                            </p>
+                          )}
+                        </div>
+
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingId(med.id);
+                            setFormData({
+                              name: med.name || "",
+                              dosage: med.dosage || "",
+                              frequency: med.frequency || "",
+                              duration: med.duration || "",
+                              instructions: med.instructions || "",
+                              reminderTimes:
+                                med.reminderTimes?.length
+                                  ? med.reminderTimes
+                                  : getReminderTimes(med.frequency),
+                            });
+                          }}
+                          aria-label="Edit medicine"
+                        >
+                          <Edit size={18} />
+                        </Button>
+                      </div>
                     </>
                   )}
                 </div>

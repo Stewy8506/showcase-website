@@ -112,7 +112,8 @@ export default function Dashboard() {
     name: string
     dosage: string
     frequency: string
-    time: string        // e.g. "08:00"
+    time?: string                 // legacy single-time support
+    reminderTimes?: string[]      // new multi-time support
     checked: boolean
     date: Timestamp
   }
@@ -568,8 +569,12 @@ export default function Dashboard() {
                     >
                       <MedicationCard
                         name={m.name}
-                        dosage={m.dosage}
-                        time={m.time}
+                        dosage={m.dosage === "Not specified" ? "" : m.dosage}
+                        time={
+                          m.reminderTimes && m.reminderTimes.length > 0
+                            ? m.reminderTimes.join(", ")
+                            : m.time || "Not specified"
+                        }
                         checked={m.checked}
                         onToggle={() => toggleMedication(m.id)}
                       />
