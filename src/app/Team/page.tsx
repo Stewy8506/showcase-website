@@ -22,18 +22,23 @@ export default function TeamPage() {
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-10">
           <div>
             <p className="text-sm font-medium text-muted-foreground tracking-wide">04</p>
-            <h1 className="text-2xl md:text-3xl font-semibold mt-1">Our team</h1>
+            <h1 className="text-primary text-2xl md:text-3xl font-semibold mt-1">Our team</h1>
 
-            <p className="mt-3 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+            <p className="mt-3 max-w-2xl text-foreground/50 text-sm leading-relaxed">
               We craft solutions that amplify key characteristics, achieving a harmonious balance of
               function and intent. Through careful analysis and collaborative engagement, our spaces
               transcend the conventional.
             </p>
           </div>
 
-          <button className="self-start mt-2 px-4 py-2 rounded-full border text-sm hover:bg-muted transition">
-            Read more
-          </button>
+          <Link
+            href="https://www.youtube.com/watch?v=paq6sVkkEg0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="self-start mt-2 px-4 py-2 rounded-full border text-primary text-sm hover:bg-muted transition inline-block"
+          >
+            Don't Read More.
+          </Link>
         </div>
 
         {/* Team Grid */}
@@ -41,15 +46,17 @@ export default function TeamPage() {
           {/* Member 1 */}
           <div className="rounded-xl border bg-muted/10">
             <div className="relative w-full aspect-[4/5] rounded-t-xl overflow-hidden bg-muted">
-              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                Add image
-              </div>
+              <img
+                src="/Anuvab.jpeg"
+                alt="Anuvab"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <div className="px-4 py-3">
-              <p className="font-medium text-sm">Michael Scott</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Co‑Founder, Chief Architect
+              <p className="text-primary font-medium text-sm">Anuvab Das</p>
+              <p className="text-xs text-foreground/50 mt-1">
+                Chief Ejaculation Officer (CEO)
               </p>
             </div>
           </div>
@@ -57,15 +64,17 @@ export default function TeamPage() {
           {/* Member 2 */}
           <div className="rounded-xl border bg-muted/10">
             <div className="relative w-full aspect-[4/5] rounded-t-xl overflow-hidden bg-muted">
-              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                Add image
-              </div>
+              <img
+                src="/Debadree.jpg"
+                alt="Debadree"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <div className="px-4 py-3">
-              <p className="font-medium text-sm">Chandler Rigs</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Co‑Founder, Architect
+              <p className="text-primary font-medium text-sm">Debadree Sekhar Das</p>
+              <p className="text-xs text-foreground/50 mt-1">
+                Chief API Sufferer
               </p>
             </div>
           </div>
@@ -73,15 +82,17 @@ export default function TeamPage() {
           {/* Member 3 */}
           <div className="rounded-xl border bg-muted/10">
             <div className="relative w-full aspect-[4/5] rounded-t-xl overflow-hidden bg-muted">
-              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                Add image
-              </div>
+              <img
+                src="/Suchetan.jpeg"
+                alt="Suchetan"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <div className="px-4 py-3">
-              <p className="font-medium text-sm">Isabella Rodriguez</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Architect
+              <p className="text-primary font-medium text-sm">Suchetan Chakraborty</p>
+              <p className="text-xs text-foreground/50 mt-1">
+                Head Giver Finalboss
               </p>
             </div>
           </div>
@@ -89,15 +100,17 @@ export default function TeamPage() {
           {/* Member 4 */}
           <div className="rounded-xl border bg-muted/10">
             <div className="relative w-full aspect-[4/5] rounded-t-xl overflow-hidden bg-muted">
-              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                Add image
-              </div>
+              <img
+                src="/Sagoto.webp"
+                alt="Swagata"
+                className="w-full h-full object-cover"
+              />
             </div>
 
             <div className="px-4 py-3">
-              <p className="font-medium text-sm">Ava Wilson</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                3D Artist
+              <p className="text-primary font-medium text-sm">Shagota Ganguly</p>
+              <p className="text-xs text-foreground/50 mt-1">
+                Professional Brokie
               </p>
             </div>
           </div>
