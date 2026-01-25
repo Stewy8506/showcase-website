@@ -7,6 +7,7 @@ import {
   getDocs,
   doc,
   updateDoc,
+  addDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,16 @@ export default function MedicineCentrePage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({});
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newMed, setNewMed] = useState<any>({
+    name: "",
+    dosage: "",
+    frequency: "",
+    duration: "",
+    instructions: "",
+    reminderTimes: [],
+  });
 
   // Prevent repeated alerts in same minute
   const lastAlertRef = useRef<string>("");
@@ -117,18 +128,109 @@ export default function MedicineCentrePage() {
         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Back to Dashboard
       </Link>
-        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center gap-3">
-          <div className="p-2.5 bg-accent/20 rounded-lg">
-            <Pill size={28} className="text-accent" />
+        <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-accent/20 rounded-lg">
+              <Pill size={28} className="text-accent" />
+            </div>
+            <div>
+              <h1 className="text-primary text-3xl font-bold">Medicine Centre</h1>
+              <p className="text-muted-foreground text-sm">
+                Manage your medications and reminders
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-primary text-3xl font-bold">Medicine Centre</h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your medications and reminders
-            </p>
-          </div>
+          <Button onClick={() => setShowAddModal(true)}>
+            + Add Medicine
+          </Button>
         </div>
       </header>
+
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border border-border rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-semibold mb-4">Add Medicine</h2>
+
+            <input
+              className="w-full mb-2"
+              placeholder="Medicine name"
+              value={newMed.name}
+              onChange={(e) => setNewMed({ ...newMed, name: e.target.value })}
+            />
+            <input
+              className="w-full mb-2"
+              placeholder="Dosage"
+              value={newMed.dosage}
+              onChange={(e) => setNewMed({ ...newMed, dosage: e.target.value })}
+            />
+            <input
+              className="w-full mb-2"
+              placeholder="Frequency (e.g. Twice a day)"
+              value={newMed.frequency}
+              onChange={(e) => setNewMed({ ...newMed, frequency: e.target.value })}
+            />
+            <input
+              className="w-full mb-2"
+              placeholder="Duration"
+              value={newMed.duration}
+              onChange={(e) => setNewMed({ ...newMed, duration: e.target.value })}
+            />
+            <textarea
+              className="w-full mb-2"
+              placeholder="Instructions"
+              value={newMed.instructions}
+              onChange={(e) =>
+                setNewMed({ ...newMed, instructions: e.target.value })
+              }
+            />
+
+            <div className="flex gap-2 justify-end mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowAddModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => {
+                  const user = getAuth().currentUser;
+                  if (!user) return;
+
+                  const data = {
+                    ...newMed,
+                    reminderTimes:
+                      newMed.reminderTimes?.length
+                        ? newMed.reminderTimes
+                        : getReminderTimes(newMed.frequency),
+                  };
+
+                  const ref = await addDoc(
+                    collection(db, "users", user.uid, "medical"),
+                    data
+                  );
+
+                  setMedicines((prev) => [
+                    ...prev,
+                    { id: ref.id, ...data },
+                  ]);
+
+                  setNewMed({
+                    name: "",
+                    dosage: "",
+                    frequency: "",
+                    duration: "",
+                    instructions: "",
+                    reminderTimes: [],
+                  });
+                  setShowAddModal(false);
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ---------- MAIN ---------- */}
       <main className="max-w-6xl mx-auto px-4 py-8">

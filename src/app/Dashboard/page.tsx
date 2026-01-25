@@ -442,7 +442,7 @@ export default function Dashboard() {
       <button
         onClick={() => {
           setShowAddMenu(false)
-          console.log("Add medication")
+          router.push("/medicine-centre")
         }}
         className="w-full text-left px-4 py-2 text-sm text-primary hover:bg-primary/10 rounded-t-2xl"
       >
