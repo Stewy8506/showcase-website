@@ -216,6 +216,43 @@ export default function Dashboard() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [dragActive, setDragActive] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [analysisResult, setAnalysisResult] = useState<string | null>(null)
+  const [showAnalysisModal, setShowAnalysisModal] = useState(false)
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
+
+  async function uploadAndAnalyzeFile(file: File) {
+    if (!file) return
+
+    setUploading(true)
+    setUploadedFileName(file.name)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/documentation", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to analyze document")
+      }
+
+      const data = await response.json()
+      setAnalysisResult(data.result)
+      setShowUploadModal(false)
+      setShowAnalysisModal(true)
+    } catch (error: any) {
+      console.error("Upload error:", error)
+      alert(`Failed to analyze document: ${error.message}`)
+      setShowUploadModal(false)
+    } finally {
+      setUploading(false)
+    }
+  }
 
   function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -224,18 +261,18 @@ export default function Dashboard() {
     const files = e.dataTransfer.files
     console.log("Dropped files:", files)
 
-    // Simulate upload complete → close modal + redirect
-    setShowUploadModal(false)
-    router.push("/Analysis")
+    if (files.length > 0) {
+      uploadAndAnalyzeFile(files[0])
+    }
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files
     console.log("Selected files:", files)
 
-    // Simulate upload complete → close modal + redirect
-    setShowUploadModal(false)
-    router.push("/Analysis")
+    if (files && files.length > 0) {
+      uploadAndAnalyzeFile(files[0])
+    }
   }
 
   // --- Resizable Left Column (Calendar + Medications) ---
@@ -575,7 +612,7 @@ export default function Dashboard() {
         {showUploadModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
-            onClick={() => setShowUploadModal(false)}
+            onClick={() => !uploading && setShowUploadModal(false)}
           >
             <div
               className="relative bg-white rounded-3xl w-full max-w-lg p-6 shadow-xl border border-primary/10"
@@ -589,8 +626,9 @@ export default function Dashboard() {
               onDrop={handleFileDrop}
             >
               <button
-                onClick={() => setShowUploadModal(false)}
-                className="absolute top-3 right-3 p-2 rounded-full hover:bg-primary/10"
+                onClick={() => !uploading && setShowUploadModal(false)}
+                disabled={uploading}
+                className="absolute top-3 right-3 p-2 rounded-full hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Close upload"
               >
                 <X className="w-4 h-4 text-primary" strokeWidth={2} />
@@ -598,31 +636,99 @@ export default function Dashboard() {
 
               <h3 className="text-lg font-bold text-primary mb-4">Upload Report</h3>
 
-              <div
-                className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors p-8 ${
-                  dragActive ? "border-primary bg-primary/5" : "border-primary/20"
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-
-                <FileText className="w-10 h-10 text-primary mb-3" strokeWidth={1.5} />
-
-                <p className="text-sm text-primary/80 text-center mb-2">
-                  Drop your documents here
-                </p>
-                <p className="text-xs text-primary/60 mb-4">or</p>
-
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 rounded-full bg-[#F0BF70] text-black font-semibold hover:opacity-90"
+              {uploading ? (
+                <div className="flex flex-col items-center justify-center p-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+                  <p className="text-sm text-primary/80 text-center">
+                    Analyzing document with AI...
+                  </p>
+                  {uploadedFileName && (
+                    <p className="text-xs text-primary/60 mt-2">{uploadedFileName}</p>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-colors p-8 ${
+                    dragActive ? "border-primary bg-primary/5" : "border-primary/20"
+                  }`}
                 >
-                  Browse files
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.doc,.docx"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    disabled={uploading}
+                  />
+
+                  <FileText className="w-10 h-10 text-primary mb-3" strokeWidth={1.5} />
+
+                  <p className="text-sm text-primary/80 text-center mb-2">
+                    Drop your documents here
+                  </p>
+                  <p className="text-xs text-primary/60 mb-4">or</p>
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="px-4 py-2 rounded-full bg-[#F0BF70] text-black font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Browse files
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {showAnalysisModal && analysisResult && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
+            onClick={() => setShowAnalysisModal(false)}
+          >
+            <div
+              className="relative bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] p-6 shadow-xl border border-primary/10 flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowAnalysisModal(false)}
+                className="absolute top-3 right-3 p-2 rounded-full hover:bg-primary/10"
+                aria-label="Close analysis"
+              >
+                <X className="w-4 h-4 text-primary" strokeWidth={2} />
+              </button>
+
+              <h3 className="text-lg font-bold text-primary mb-4">
+                Document Analysis
+              </h3>
+              {uploadedFileName && (
+                <p className="text-xs text-primary/60 mb-4">File: {uploadedFileName}</p>
+              )}
+
+              <div className="flex-1 overflow-y-auto pr-2">
+                <div className="prose prose-sm max-w-none text-primary/90 whitespace-pre-wrap">
+                  {analysisResult}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-primary/10 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAnalysisModal(false)
+                    setAnalysisResult(null)
+                    setUploadedFileName(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl bg-primary text-white font-semibold hover:opacity-90"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(true)
+                    setShowAnalysisModal(false)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90"
+                >
+                  Upload Another
                 </button>
               </div>
             </div>
