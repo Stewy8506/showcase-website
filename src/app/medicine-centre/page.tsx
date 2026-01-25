@@ -10,7 +10,9 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
-import { Pill } from "lucide-react";
+import { Pill, Edit } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 /* ---------------- TYPES ---------------- */
 
@@ -101,15 +103,26 @@ export default function MedicineCentrePage() {
   /* ---------------- UI ---------------- */
 
   return (
-    <div className="min-h-screen bg-background text-foreground dark">
+    <div className="dashboard-theme min-h-screen bg-background text-foreground dark">
+      
       {/* ---------- HEADER ---------- */}
-      <header className="border-b border-border bg-primary/20 backdrop-blur-sm sticky top-0 z-10">
+      <header className="border-w border-border bg-primary/0 backdrop-blur-sm sticky top-0 z-10">
+      <Link
+        href="/Dashboard"
+        className="absolute top-8 left-8 flex items-center gap-2
+        px-3 py-2 rounded-md
+        bg-background/70 backdrop-blur
+        text-foreground hover:text-primary transition-colors group"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        Back to Dashboard
+      </Link>
         <div className="max-w-6xl mx-auto px-4 py-6 flex items-center gap-3">
           <div className="p-2.5 bg-accent/20 rounded-lg">
             <Pill size={28} className="text-accent" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Medicine Centre</h1>
+            <h1 className="text-primary text-3xl font-bold">Medicine Centre</h1>
             <p className="text-muted-foreground text-sm">
               Manage your medications and reminders
             </p>
@@ -119,12 +132,12 @@ export default function MedicineCentrePage() {
 
       {/* ---------- MAIN ---------- */}
       <main className="max-w-6xl mx-auto px-4 py-8">
+        
         {medicines.length === 0 ? (
           <p>No medicines found.</p>
         ) : (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {medicines
-              .filter((m) => m.dosage && m.dosage !== "Not specified")
               .map((med) => (
                 <div
                   key={med.id}
@@ -256,7 +269,8 @@ export default function MedicineCentrePage() {
                         </p>
                       )}
                       <Button
-                        size="sm"
+                        size="icon"
+                        variant="ghost"
                         onClick={() => {
                           setEditingId(med.id);
                           setFormData({
@@ -271,8 +285,9 @@ export default function MedicineCentrePage() {
                                 : getReminderTimes(med.frequency),
                           });
                         }}
+                        aria-label="Edit medicine"
                       >
-                        Edit
+                        <Edit size={18} />
                       </Button>
                     </>
                   )}
