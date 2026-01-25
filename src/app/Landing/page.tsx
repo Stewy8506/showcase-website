@@ -39,7 +39,7 @@ export default function LandingPage() {
       window.location.href = "/Dashboard"
     } else {
       // not logged in → go to signup
-      window.location.href = "/Signup"
+      window.location.href = "/signup"
     }
   }
 
