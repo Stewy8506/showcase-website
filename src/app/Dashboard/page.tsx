@@ -19,7 +19,17 @@ import { useRouter } from "next/navigation"
 import { auth } from "@/lib/firebase"
 import { onAuthStateChanged, signOut } from "firebase/auth"
 import { AnimatePresence, motion } from "framer-motion"
-import { doc, onSnapshot, getDoc } from "firebase/firestore"
+import {
+  doc,
+  onSnapshot,
+  getDoc,
+  collection,
+  addDoc,
+  Timestamp,
+  query,
+  where,
+  updateDoc,
+} from "firebase/firestore"
 import { migrateAuthUserToProfile } from "@/lib/firestore/users"
 import { db } from "@/lib/firebase"
 
@@ -97,119 +107,73 @@ export default function Dashboard() {
       unsub()
     }
   }, [router])
-  const [medications, setMedications] = useState([
-    { id: 4, name: "Soframycin", dosage: "Lotion", time: "11:00 AM", checked: false },
-    { id: 1, name: "Probiotic", dosage: "250mg", time: "04:00 PM", checked: false },
-    { id: 2, name: "Loratadine", dosage: "10mg", time: "06:30 PM", checked: false },
-    { id: 3, name: "Creatine", dosage: "5mg", time: "09:00 PM", checked: false },
-
-  ])
-  // Helper: convert "hh:mm AM/PM" to minutes since midnight
-  function timeToMinutes(time: string) {
-    // expects format like "04:00 PM"
-    const [t, period] = time.split(" ")
-    const [h, m] = t.split(":").map(Number)
-
-    let hours = h % 12
-    if (period === "PM") hours += 12
-
-    return hours * 60 + m
+  type FirestoreMedication = {
+    id: string
+    name: string
+    dosage: string
+    frequency: string
+    checked: boolean
+    date: Timestamp
   }
 
-  // Helper: get current time in minutes since midnight
-  function nowToMinutes() {
-    const d = new Date()
-    return d.getHours() * 60 + d.getMinutes()
-  }
-
-  const toggleMedication = (id: number) => {
-    setMedications(items => {
-      const updated = items.map(m =>
-        m.id === id ? { ...m, checked: !m.checked } : m
-      )
-
-      const reordered = [...updated].sort((a, b) => {
-        // unchecked first, checked at the bottom
-        if (a.checked !== b.checked) {
-          return Number(a.checked) - Number(b.checked)
-        }
-
-        // when BOTH are unchecked → sort by time of consumption
-        if (!a.checked && !b.checked) {
-          return timeToMinutes(a.time) - timeToMinutes(b.time)
-        }
-
-        // when both are checked → preserve relative order
-        return 0
-      })
-
-      return reordered
-    })
-  }
+  const [medications, setMedications] = useState<FirestoreMedication[]>([])
+  // --- Firestore-backed medication checked count ---
   const checkedCount = medications.filter((m) => m.checked).length
   const [notifications, setNotifications] = useState<any[]>([])
   const [missedMeds, setMissedMeds] = useState<any[]>([])
 
-  useEffect(() => {
-    function computeNotifications() {
-      const now = nowToMinutes()
-
-      const unchecked = medications.filter(m => !m.checked)
-
-      const missed = unchecked
-        .filter(m => timeToMinutes(m.time) < now)
-        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
-        setMissedMeds(missed)
-
-      const upcoming = unchecked
-        .filter(m => timeToMinutes(m.time) >= now)
-        .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time))
-
-      const next = upcoming.length > 0 ? upcoming[0] : null
-
-      const list: any[] = []
-
-      // Missed medicines (red alert items)
-      missed.forEach(m => {
-        list.push({
-          id: `missed-${m.id}`,
-          title: "Missed Medicine",
-          text: `${m.name} — scheduled at ${m.time}`,
-          icon: "alert",
-          missed: true,
-        })
-      })
-
-      // Next upcoming medicine
-      if (next) {
-        list.push({
-          id: `next-${next.id}`,
-          title: "Next Medicine",
-          text: `${next.name} at ${next.time}`,
-          icon: "clock",
-          missed: false,
-        })
-      }
-
-      setNotifications(list)
-    }
-
-    // Compute now + refresh every minute
-    computeNotifications()
-    const t = setInterval(computeNotifications, 60 * 1000)
-    return () => clearInterval(t)
-  }, [medications, selectedDate])
-
-  
+  // Remove time-based missed/notification logic for now (to be restored later)
 
   function handleCalendarDateChange(date: Date) {
     setSelectedDate(date)
-    setMedications(items =>
-      items.map(m => ({
-        ...m,
-        checked: false,
-      }))
+    // No need to reset checked state, Firestore will load correct data
+  }
+
+  // Firestore: Fetch medications for user + selectedDate
+  useEffect(() => {
+    if (!user || !selectedDate) return
+
+    const start = new Date(selectedDate)
+    start.setHours(0, 0, 0, 0)
+
+    const end = new Date(selectedDate)
+    end.setHours(23, 59, 59, 999)
+
+    const medsRef = collection(db, "users", user.uid, "medical")
+
+    const q = query(
+      medsRef,
+      where("date", ">=", Timestamp.fromDate(start)),
+      where("date", "<=", Timestamp.fromDate(end))
     )
+
+    const unsub = onSnapshot(q, snap => {
+      const list = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+      })) as FirestoreMedication[]
+
+      setMedications(list)
+    })
+
+    return () => unsub()
+  }, [user, selectedDate])
+
+  // Toggle medication: update Firestore only
+  const toggleMedication = async (id: string) => {
+    if (!user) return
+
+    const target = medications.find(m => m.id === id)
+    if (!target) return
+
+    try {
+      await updateDoc(
+        doc(db, "users", user.uid, "medical", id),
+        { checked: !target.checked }
+      )
+    } catch (err) {
+      console.error("Failed to toggle medication:", err)
+    }
   }
 
   const [showUploadModal, setShowUploadModal] = useState(false)
@@ -219,6 +183,34 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false)
   const [analysisResult, setAnalysisResult] = useState<string | null>(null)
   const [editingIndex, setEditingIndex] = useState<number | null>(null)
+
+  async function saveMedicineToFirestore(
+    med: {
+      name: string
+      dosage: string
+      frequency: string
+      duration: string
+      instructions: string
+    }
+  ) {
+    if (!user) return
+
+    try {
+      await addDoc(collection(db, "users", user.uid, "medical"), {
+        name: med.name,
+        dosage: med.dosage,
+        frequency: med.frequency,
+        duration: med.duration,
+        instructions: med.instructions,
+        checked: false,
+        date: Timestamp.fromDate(selectedDate || new Date()),
+        createdAt: Timestamp.now(),
+      })
+    } catch (err) {
+      console.error("Failed to save medicine:", err)
+      alert("Failed to save medicine to Firestore")
+    }
+  }
   const [showAnalysisModal, setShowAnalysisModal] = useState(false)
   const [uploadedFileName, setUploadedFileName] = useState<string | null>(null)
 
@@ -506,14 +498,13 @@ export default function Dashboard() {
                       exit={{ opacity: 0, scale: 0.98, y: 4 }}
                       transition={{ duration: 0.18, ease: "easeOut" }}
                     >
-                    <MedicationCard
-                      name={m.name}
-                      dosage={m.dosage}
-                      time={m.time}
-                      checked={m.checked}
-                      missed={missedMeds.some(x => x.id === m.id)}
-                      onToggle={() => toggleMedication(m.id)}
-                    />
+                      <MedicationCard
+                        name={m.name}
+                        dosage={m.dosage}
+                        time={m.date?.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || "N/A"}
+                        checked={m.checked}
+                        onToggle={() => toggleMedication(m.id)}
+                      />
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -602,14 +593,7 @@ export default function Dashboard() {
           </section>
         </main>
 
-        {missedMeds.length > 0 && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[90] px-6 py-3 rounded-2xl bg-red-600 text-white shadow-lg border border-red-400">
-            <p className="text-sm font-semibold">
-              You have {missedMeds.length} missed medication
-              {missedMeds.length > 1 ? "s" : ""}. Please take them as soon as possible.
-            </p>
-          </div>
-        )}
+        {/* Missed meds banner removed temporarily (relies on time-based logic) */}
         {showUploadModal && (
           <div
             className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-sm flex items-center justify-center px-4"
@@ -775,6 +759,40 @@ export default function Dashboard() {
                                 </div>
                               )
                             })}
+                            {editingIndex === index && (
+                              <div className="mt-3 flex justify-end">
+                                <button
+                                  onClick={() => {
+                                    const map: any = {}
+
+                                    details.forEach(d => {
+                                      const [label, ...rest] = d.split(":")
+                                      const value = rest.join(":").trim()
+
+                                      const key = label
+                                        .toLowerCase()
+                                        .replace("medicine", "")
+                                        .trim()
+
+                                      map[key] = value
+                                    })
+
+                                    saveMedicineToFirestore({
+                                      name,
+                                      dosage: map.dosage || "Not specified",
+                                      frequency: map.frequency || "Not specified",
+                                      duration: map.duration || "Not specified",
+                                      instructions: map.instructions || "Not specified",
+                                    })
+
+                                    setEditingIndex(null)
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:opacity-90"
+                                >
+                                  Save to Medications
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -795,12 +813,53 @@ export default function Dashboard() {
                 </button>
                 <button
                   onClick={() => {
-                    setShowUploadModal(true)
+                    if (!analysisResult) return
+
+                    // Parse and save all medicines at once
+                    analysisResult
+                      .split(/\n\s*\n/)
+                      .forEach(block => {
+                        const lines = block.split("\n")
+
+                        const nameLine = lines.find(l =>
+                          l.toLowerCase().startsWith("medicine name")
+                        )
+
+                        if (!nameLine) return
+
+                        const name = nameLine.split(":").slice(1).join(":").trim()
+                        const details = lines.filter(l => l !== nameLine)
+
+                        const map: any = {}
+
+                        details.forEach(d => {
+                          const [label, ...rest] = d.split(":")
+                          const value = rest.join(":").trim()
+
+                          const key = label
+                            .toLowerCase()
+                            .replace("medicine", "")
+                            .trim()
+
+                          map[key] = value
+                        })
+
+                        saveMedicineToFirestore({
+                          name,
+                          dosage: map.dosage || "Not specified",
+                          frequency: map.frequency || "Not specified",
+                          duration: map.duration || "Not specified",
+                          instructions: map.instructions || "Not specified",
+                        })
+                      })
+
                     setShowAnalysisModal(false)
+                    setAnalysisResult(null)
+                    setUploadedFileName(null)
                   }}
                   className="flex-1 px-4 py-2 rounded-xl bg-[#F0BF70] text-black font-semibold hover:opacity-90"
                 >
-                  Upload Another
+                  Save
                 </button>
               </div>
             </div>
